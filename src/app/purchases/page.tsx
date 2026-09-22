@@ -1,3 +1,4 @@
+// src/app/purchases/page.tsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -60,6 +61,7 @@ interface PurchaseItem {
   sellingPrice: number;
   totalCost: number;
   imageUrl?: string;
+  isFavorite?: boolean;
   createdAt: Timestamp | Date | string;
 }
 
@@ -88,6 +90,7 @@ export default function PurchasesPage() {
   const [qty, setQty] = useState<number | "">("");
   const [costPrice, setCostPrice] = useState<number | "">("");
   const [sellingPrice, setSellingPrice] = useState<number | "">("");
+  const [isFavorite, setIsFavorite] = useState(false);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>("");
@@ -186,6 +189,24 @@ export default function PurchasesPage() {
     }
   };
 
+  // Delete Category
+  const handleDeleteCategory = async () => {
+    if (!category) return;
+    if (confirm(`Are you sure you want to delete the category "${category}"?`)) {
+      try {
+        const catObj = categories.find((c) => c.name === category);
+        if (catObj && catObj.id) {
+          await deleteDoc(doc(db, "categories", catObj.id));
+          setCategory("");
+          alert("Category deleted successfully!");
+        }
+      } catch (err) {
+        console.error("Delete Category Error:", err);
+        alert("Error deleting category.");
+      }
+    }
+  };
+
   // Quick Add Brand
   const handleAddBrand = async () => {
     if (!newBrandName.trim()) return;
@@ -202,6 +223,24 @@ export default function PurchasesPage() {
     }
   };
 
+  // Delete Brand
+  const handleDeleteBrand = async () => {
+    if (!brand) return;
+    if (confirm(`Are you sure you want to delete the brand "${brand}"?`)) {
+      try {
+        const brandObj = brands.find((b) => b.name === brand);
+        if (brandObj && brandObj.id) {
+          await deleteDoc(doc(db, "brands", brandObj.id));
+          setBrand("");
+          alert("Brand deleted successfully!");
+        }
+      } catch (err) {
+        console.error("Delete Brand Error:", err);
+        alert("Error deleting brand.");
+      }
+    }
+  };
+
   // Reset Form
   const resetForm = () => {
     setEditingId(null);
@@ -214,6 +253,7 @@ export default function PurchasesPage() {
     setQty("");
     setCostPrice("");
     setSellingPrice("");
+    setIsFavorite(false);
     setImageFile(null);
     setCurrentImageUrl("");
     setShowNewCatInput(false);
@@ -233,6 +273,7 @@ export default function PurchasesPage() {
     setQty(p.qty ?? "");
     setCostPrice(p.costPrice ?? "");
     setSellingPrice(p.sellingPrice ?? "");
+    setIsFavorite(p.isFavorite || false);
     setCurrentImageUrl(p.imageUrl || "");
     setImageFile(null);
 
@@ -255,8 +296,8 @@ export default function PurchasesPage() {
     if (!p.id) return;
 
     const confirmMsg = p.itemName 
-      ? `"${p.itemName}" මිලදී ගැනීමේ සටහන මකා දැමීමට තහවුරු කරන්නද?` 
-      : "මෙම මිලදී ගැනීමේ සටහන මකා දැමීමට තහවුරු කරන්නද?";
+      ? `Are you sure you want to delete the purchase record for "${p.itemName}"?` 
+      : "Are you sure you want to delete this purchase record?";
 
     if (confirm(confirmMsg)) {
       try {
@@ -277,14 +318,14 @@ export default function PurchasesPage() {
         }
 
         await deleteDoc(doc(db, "purchases", p.id));
-        alert("සටහන සාර්ථකව මකා දමන ලදී!");
+        alert("Record deleted successfully!");
 
         if (editingId === p.id) {
           resetForm();
         }
       } catch (error) {
         console.error("Delete Error: ", error);
-        alert("මකා දැමීමේදී දෝෂයක් සිදු විය: " + (error as Error).message);
+        alert("Error occurred while deleting: " + (error as Error).message);
       }
     }
   };
@@ -300,7 +341,7 @@ export default function PurchasesPage() {
       costPrice === "" ||
       sellingPrice === ""
     ) {
-      alert("කරුණාකර සියලුම අවශ්‍ය තොරතුරු ඇතුළත් කරන්න!");
+      alert("Please fill in all required information!");
       return;
     }
 
@@ -332,6 +373,7 @@ export default function PurchasesPage() {
         sellingPrice: Number(sellingPrice),
         totalCost,
         imageUrl,
+        isFavorite,
         createdAt: finalDate,
       };
 
@@ -353,12 +395,13 @@ export default function PurchasesPage() {
             sellingPrice: Number(sellingPrice),
             category: category || prodDoc.data().category,
             brand: brand || prodDoc.data().brand,
+            isFavorite,
             ...(imageUrl ? { imageUrl } : {}),
             updatedAt: new Date(),
           });
         }
 
-        alert("මිලදී ගැනීමේ සටහන සාර්ථකව වෙනස් කළා (Update)!");
+        alert("Purchase record updated successfully!");
       } else {
         await addDoc(collection(db, "purchases"), purchaseData);
 
@@ -376,6 +419,7 @@ export default function PurchasesPage() {
             sellingPrice: Number(sellingPrice),
             category: category || prodDoc.data().category,
             brand: brand || prodDoc.data().brand,
+            isFavorite,
             ...(imageUrl ? { imageUrl } : {}),
             updatedAt: new Date(),
           });
@@ -389,17 +433,18 @@ export default function PurchasesPage() {
             sellingPrice: Number(sellingPrice),
             stockQty: Number(qty),
             imageUrl,
+            isFavorite,
             createdAt: finalDate,
           });
         }
 
-        alert("භාණ්ඩ මිලදී ගැනීම සාර්ථකව සේව් විය සහ Stock එක යාවත්කාලීන විය!");
+        alert("Purchase saved successfully and stock updated!");
       }
 
       resetForm();
     } catch (error) {
       console.error("Purchase Error: ", error);
-      alert("දෝෂයක් සිදු විය!");
+      alert("An error occurred!");
     } finally {
       setUploading(false);
     }
@@ -507,7 +552,7 @@ export default function PurchasesPage() {
 
             <div>
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
-                <CalendarDays className="w-3.5 h-3.5 text-blue-500" /> Purchase Date (දිනය)
+                <CalendarDays className="w-3.5 h-3.5 text-blue-500" /> Purchase Date
               </label>
               <input
                 type="date"
@@ -570,6 +615,16 @@ export default function PurchasesPage() {
                 >
                   <Plus className="w-3 h-3" /> New
                 </button>
+                {category && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteCategory}
+                    className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
+                    title="Delete selected category"
+                  >
+                    <Trash2 className="w-3 h-3" /> Remove
+                  </button>
+                )}
               </div>
               {showNewCatInput && (
                 <div className="flex gap-2 mt-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -615,6 +670,16 @@ export default function PurchasesPage() {
                 >
                   <Plus className="w-3 h-3" /> New
                 </button>
+                {brand && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteBrand}
+                    className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
+                    title="Delete selected brand"
+                  >
+                    <Trash2 className="w-3 h-3" /> Remove
+                  </button>
+                )}
               </div>
               {showNewBrandInput && (
                 <div className="flex gap-2 mt-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -638,7 +703,7 @@ export default function PurchasesPage() {
 
             <div>
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
-                <Package className="w-3.5 h-3.5 text-blue-500" /> Quantity (ප්‍රමාණය)
+                <Package className="w-3.5 h-3.5 text-blue-500" /> Quantity
               </label>
               <input
                 type="number"
@@ -689,10 +754,24 @@ export default function PurchasesPage() {
               </div>
             </div>
 
+            {/* Favorite Checkbox in Form */}
+            <div className="flex items-center gap-2 pt-1 pb-1">
+              <input
+                type="checkbox"
+                id="isFavorite"
+                checked={isFavorite}
+                onChange={(e) => setIsFavorite(e.target.checked)}
+                className="w-4 h-4 text-amber-600 rounded border-slate-300 dark:border-slate-700 focus:ring-amber-500 cursor-pointer"
+              />
+              <label htmlFor="isFavorite" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                ⭐ Mark as Favorite Item
+              </label>
+            </div>
+
             <div>
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1 flex items-center gap-1.5">
                 <ImageIcon className="w-3.5 h-3.5 text-blue-500" /> Product Photo{" "}
-                {editingId ? "(Optional: වෙනස් කිරීමට පමණක්)" : "(Optional)"}
+                {editingId ? "(Optional: For change only)" : "(Optional)"}
               </label>
               <input
                 type="file"
@@ -852,10 +931,31 @@ export default function PurchasesPage() {
                             {p.supplierName}
                           </td>
                           <td className="p-3">
-                            <span className="font-mono text-blue-600 dark:text-blue-400 font-bold block">
-                              {p.partNumber}
-                            </span>
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">{p.itemName}</span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!p.id) return;
+                                  try {
+                                    await updateDoc(doc(db, "purchases", p.id), {
+                                      isFavorite: !p.isFavorite,
+                                    });
+                                  } catch (err) {
+                                    console.error(err);
+                                  }
+                                }}
+                                className="text-base hover:scale-110 transition cursor-pointer focus:outline-none"
+                                title="Click to toggle favorite"
+                              >
+                                {p.isFavorite ? "⭐" : "☆"}
+                              </button>
+                              <div>
+                                <span className="font-mono text-blue-600 dark:text-blue-400 font-bold block">
+                                  {p.partNumber}
+                                </span>
+                                <span className="text-slate-700 dark:text-slate-300 font-medium">{p.itemName}</span>
+                              </div>
+                            </div>
                           </td>
                           <td className="p-3 whitespace-nowrap">
                             <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md text-[10px] font-semibold block w-fit mb-1">

@@ -9,3 +9,9 @@ export interface Product {
   stockQty: number;
   imageUrl?: string;
 }
+
+export interface CartItem extends Product {
+  cartQty: number;
+  qty?: number;
+  total?: number;
+}

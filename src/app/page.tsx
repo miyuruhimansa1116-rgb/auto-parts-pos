@@ -23,10 +23,14 @@ import {
   CircleDollarSign,
   ShoppingBag,
   Activity,
+  Flame,
 } from "lucide-react";
 
 interface SaleItem {
   id?: string;
+  invoiceNumber?: string;
+  invoiceNo?: string;
+  billNumber?: string;
   createdAt: any;
   netTotal: number;
   subTotal: number;
@@ -86,6 +90,8 @@ export default function DashboardPage() {
   const [timeFilter, setTimeFilter] = useState("1day");
   const [startDateTime, setStartDateTime] = useState("");
   const [endDateTime, setEndDateTime] = useState("");
+  
+  const [deductExpenses, setDeductExpenses] = useState(false);
 
   const fetchDashboardData = async (isRefresh = false) => {
     try {
@@ -233,7 +239,7 @@ export default function DashboardPage() {
     });
   }, [purchases, timeFilter, startDateTime, endDateTime]);
 
-  const { periodRevenue, periodProfit, periodSalesCount, totalItemsSold } =
+  const { periodRevenue, periodGrossProfit, periodCostOfGoodsSold, periodPurchasesCost, periodSalesCount, totalItemsSold } =
     useMemo(() => {
       let revenue = 0;
       let profit = 0;
@@ -276,13 +282,57 @@ export default function DashboardPage() {
         }
       });
 
+      let purchasesCost = 0;
+      filteredPurchases.forEach((p) => {
+        purchasesCost += Number(p.totalCost || 0);
+      });
+
+      const costOfGoodsSold = revenue - profit;
+
       return {
         periodRevenue: revenue,
-        periodProfit: profit,
+        periodGrossProfit: profit,
+        periodCostOfGoodsSold: costOfGoodsSold,
+        periodPurchasesCost: purchasesCost,
         periodSalesCount: filteredSales.length,
         totalItemsSold: itemsCount,
       };
-    }, [filteredSales, productsMap]);
+    }, [filteredSales, filteredPurchases, productsMap]);
+
+  const periodProfit = deductExpenses ? periodGrossProfit - periodPurchasesCost : periodGrossProfit;
+
+  const topSellingItems = useMemo(() => {
+    const itemMap: Record<
+      string,
+      { name: string; partNumber: string; category: string; qty: number; revenue: number }
+    > = {};
+
+    filteredSales.forEach((sale) => {
+      if (Array.isArray(sale.items)) {
+        sale.items.forEach((item) => {
+          const qty = Number(item.cartQty || item.qty || item.quantity) || 1;
+          const name = item.name || item.itemName || "N/A";
+          const partNumber = item.partNumber || "-";
+          const category = item.category || "General";
+          const key = item.id || partNumber || name;
+
+          const sellingPrice = Number(
+            item.sellingPrice ?? item.price ?? item.sellPrice ?? 0
+          );
+
+          if (!itemMap[key]) {
+            itemMap[key] = { name, partNumber, category, qty: 0, revenue: 0 };
+          }
+          itemMap[key].qty += qty;
+          itemMap[key].revenue += sellingPrice * qty;
+        });
+      }
+    });
+
+    return Object.values(itemMap)
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5);
+  }, [filteredSales]);
 
   const recentSales = filteredSales.slice(0, 6);
   const recentPurchases = filteredPurchases.slice(0, 6);
@@ -341,7 +391,7 @@ export default function DashboardPage() {
               Business Dashboard
             </div>
             <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
-              Good day 👋
+              Good day
             </h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Here&apos;s what&apos;s happening with your shop.
@@ -444,74 +494,137 @@ export default function DashboardPage() {
         </section>
 
         {/* KPI Cards */}
-        <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {[
-            {
-              title: "Revenue",
-              value: money(periodRevenue),
-              note: "Sales income",
-              icon: CircleDollarSign,
-              iconClass: "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300",
-            },
-            {
-              title: "Estimated Profit",
-              value: money(periodProfit),
-              note: "Selling price − cost",
-              icon: TrendingUp,
-              iconClass:
-                "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300",
-            },
-            {
-              title: "Bills",
-              value: periodSalesCount.toLocaleString(),
-              note: `${totalItemsSold.toLocaleString()} items sold`,
-              icon: Receipt,
-              iconClass:
-                "bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300",
-            },
-            {
-              title: "Products",
-              value: totalProducts.toLocaleString(),
-              note: "Inventory items",
-              icon: Boxes,
-              iconClass:
-                "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-            },
-            {
-              title: "Low Stock",
-              value: lowStockCount.toLocaleString(),
-              note: lowStockCount ? "Needs attention" : "Stock is healthy",
-              icon: AlertTriangle,
-              iconClass:
+        <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          {/* Revenue */}
+          <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-start justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+                <CircleDollarSign className="h-4 w-4" />
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+            </div>
+            <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Revenue
+            </p>
+            <p className="mt-1 truncate text-xl font-black tracking-tight">
+              {money(periodRevenue)}
+            </p>
+            <p className="mt-1 text-[10px] text-slate-400">Sales income</p>
+          </div>
+
+          {/* Estimated Profit with Expense Deduction Option */}
+          <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+              </div>
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {deductExpenses ? "Net Profit" : "Estimated Profit"}
+              </p>
+              <p className="mt-1 truncate text-xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">
+                {money(periodProfit)}
+              </p>
+              <p className="mt-1 text-[9px] text-slate-400">
+                {deductExpenses 
+                  ? `Gross (${money(periodGrossProfit)}) − Exp (${money(periodPurchasesCost)})`
+                  : `Gross profit margin`}
+              </p>
+            </div>
+
+            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                Deduct Purchases
+              </span>
+              <button
+                onClick={() => setDeductExpenses(!deductExpenses)}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  deductExpenses ? "bg-emerald-600" : "bg-slate-200 dark:bg-slate-700"
+                }`}
+                title="Deduct purchase expenses from profit"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    deductExpenses ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Sold Items Buying Cost Card */}
+          <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-start justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+            </div>
+            <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Sold Items Cost
+            </p>
+            <p className="mt-1 truncate text-xl font-black tracking-tight">
+              {money(periodCostOfGoodsSold)}
+            </p>
+            <p className="mt-1 text-[10px] text-slate-400">Total buying price</p>
+          </div>
+
+          {/* Bills */}
+          <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-start justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300">
+                <Receipt className="h-4 w-4" />
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+            </div>
+            <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Bills
+            </p>
+            <p className="mt-1 truncate text-xl font-black tracking-tight">
+              {periodSalesCount.toLocaleString()}
+            </p>
+            <p className="mt-1 text-[10px] text-slate-400">{totalItemsSold.toLocaleString()} items sold</p>
+          </div>
+
+          {/* Products */}
+          <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-start justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <Boxes className="h-4 w-4" />
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+            </div>
+            <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Products
+            </p>
+            <p className="mt-1 truncate text-xl font-black tracking-tight">
+              {totalProducts.toLocaleString()}
+            </p>
+            <p className="mt-1 text-[10px] text-slate-400">Inventory items</p>
+          </div>
+
+          {/* Low Stock */}
+          <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-start justify-between">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${
                 lowStockCount > 0
                   ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300"
-                  : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300",
-            },
-          ].map((card) => {
-            const Icon = card.icon;
-            return (
-              <div
-                key={card.title}
-                className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
-              >
-                <div className="flex items-start justify-between">
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-xl ${card.iconClass}`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
-                </div>
-                <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  {card.title}
-                </p>
-                <p className="mt-1 truncate text-xl font-black tracking-tight">
-                  {card.value}
-                </p>
-                <p className="mt-1 text-[10px] text-slate-400">{card.note}</p>
+                  : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300"
+              }`}>
+                <AlertTriangle className="h-4 w-4" />
               </div>
-            );
-          })}
+              <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+            </div>
+            <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Low Stock
+            </p>
+            <p className="mt-1 truncate text-xl font-black tracking-tight">
+              {lowStockCount.toLocaleString()}
+            </p>
+            <p className="mt-1 text-[10px] text-slate-400">{lowStockCount ? "Needs attention" : "Stock is healthy"}</p>
+          </div>
         </section>
 
         {/* Analytics + Quick Actions */}
@@ -614,8 +727,81 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Main tables */}
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_1fr]">
+        {/* Top-Selling Items & Low Stock */}
+        <section className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {/* Top Selling Items */}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-300">
+                  <Flame className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black">Top selling items</h2>
+                  <p className="text-[10px] text-slate-400">
+                    Most sold items in selected period
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-bold text-orange-600 dark:bg-orange-950/40 dark:text-orange-300">
+                Top {topSellingItems.length}
+              </span>
+            </div>
+
+            {topSellingItems.length === 0 ? (
+              <div className="flex min-h-44 flex-col items-center justify-center px-5 text-center">
+                <ShoppingBag className="mb-2 h-6 w-6 text-slate-300" />
+                <p className="text-xs font-bold">No sales records</p>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  No items sold during this period.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[500px] text-left">
+                  <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:bg-slate-800/50">
+                    <tr>
+                      <th className="px-5 py-3">Part No. / Product</th>
+                      <th className="px-5 py-3">Category</th>
+                      <th className="px-5 py-3 text-center">Qty Sold</th>
+                      <th className="px-5 py-3 text-right">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {topSellingItems.map((item, idx) => (
+                      <tr
+                        key={idx}
+                        className="transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                      >
+                        <td className="px-5 py-3">
+                          <p className="max-w-[200px] truncate text-xs font-bold">
+                            {item.name}
+                          </p>
+                          <p className="mt-0.5 text-[9px] text-blue-600 dark:text-blue-300 font-semibold">
+                            {item.partNumber}
+                          </p>
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className="rounded-md bg-slate-100 px-2 py-1 text-[9px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                            {item.category}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-center">
+                          <span className="rounded-lg bg-orange-50 px-2.5 py-1.5 text-[10px] font-black text-orange-600 dark:bg-orange-950/40 dark:text-orange-300">
+                            {item.qty} units
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-right text-xs font-black text-emerald-600 dark:text-emerald-400">
+                          {money(item.revenue)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
           {/* Low stock */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
@@ -653,12 +839,11 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[650px] text-left">
+                <table className="w-full min-w-[500px] text-left">
                   <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:bg-slate-800/50">
                     <tr>
                       <th className="px-5 py-3">Part Number</th>
                       <th className="px-5 py-3">Product</th>
-                      <th className="px-5 py-3">Category</th>
                       <th className="px-5 py-3 text-center">Stock</th>
                       <th className="px-5 py-3 text-right">Price</th>
                     </tr>
@@ -673,19 +858,9 @@ export default function DashboardPage() {
                           {p.partNumber || "-"}
                         </td>
                         <td className="px-5 py-3">
-                          <p className="max-w-[180px] truncate text-xs font-bold">
+                          <p className="max-w-[160px] truncate text-xs font-bold">
                             {p.name || "N/A"}
                           </p>
-                          {p.brand && (
-                            <p className="mt-0.5 text-[9px] text-slate-400">
-                              {p.brand}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-5 py-3">
-                          <span className="rounded-md bg-slate-100 px-2 py-1 text-[9px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                            {p.category || "General"}
-                          </span>
                         </td>
                         <td className="px-5 py-3 text-center">
                           <span className="rounded-lg bg-red-50 px-2.5 py-1.5 text-[10px] font-black text-red-600 dark:bg-red-950/40 dark:text-red-300">
@@ -702,7 +877,10 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+        </section>
 
+        {/* Recent sales & Purchases grid */}
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {/* Recent sales */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
@@ -758,8 +936,9 @@ export default function DashboardPage() {
                           <Receipt className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0">
+                          {/* Display correct invoice number from database instead of Bill # */}
                           <p className="truncate text-xs font-bold">
-                            Bill #{String(sale.id || index + 1).slice(-8)}
+                            {String(sale.invoiceNumber || sale.invoiceNo || sale.billNumber || sale.id)}
                           </p>
                           <p className="mt-0.5 text-[9px] text-slate-400">
                             {date
@@ -783,71 +962,61 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-        </section>
 
-        {/* Purchases */}
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
-                <Truck className="h-4 w-4" />
+          {/* Purchases */}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
+                  <Truck className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black">Supplier purchases</h2>
+                  <p className="text-[10px] text-slate-400">
+                    Recent stock restocks for the selected period
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-sm font-black">Supplier purchases</h2>
-                <p className="text-[10px] text-slate-400">
-                  Recent stock restocks for the selected period
+              <Clock3 className="h-4 w-4 text-slate-300" />
+            </div>
+
+            {recentPurchases.length === 0 ? (
+              <div className="flex min-h-44 flex-col items-center justify-center text-center px-5">
+                <p className="text-xs text-slate-400">
+                  No supplier purchases recorded for this period.
                 </p>
               </div>
-            </div>
-            <Clock3 className="h-4 w-4 text-slate-300" />
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {recentPurchases.map((p, idx) => {
+                  const date = getDate(p.createdAt);
+                  return (
+                    <div
+                      key={p.id || idx}
+                      className="flex items-center justify-between gap-3 px-5 py-3.5"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                          <Truck className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold">
+                            {p.supplierName || "N/A"}
+                          </p>
+                          <p className="mt-0.5 text-[9px] text-slate-400">
+                            {date ? date.toLocaleString("en-LK") : "-"} · Qty: {p.qty || 0}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="shrink-0 text-xs font-black text-amber-600 dark:text-amber-300">
+                        {money(Number(p.totalCost || 0))}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-
-          {recentPurchases.length === 0 ? (
-            <p className="px-5 py-10 text-center text-xs text-slate-400">
-              No supplier purchases recorded for this period.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] text-left">
-                <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:bg-slate-800/50">
-                  <tr>
-                    <th className="px-5 py-3">Date</th>
-                    <th className="px-5 py-3">Supplier</th>
-                    <th className="px-5 py-3">Item</th>
-                    <th className="px-5 py-3 text-center">Qty</th>
-                    <th className="px-5 py-3 text-right">Cost</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {recentPurchases.map((p, idx) => {
-                    const date = getDate(p.createdAt);
-                    return (
-                      <tr
-                        key={p.id || idx}
-                        className="transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                      >
-                        <td className="px-5 py-3 text-[10px] text-slate-500">
-                          {date ? date.toLocaleString("en-LK") : "-"}
-                        </td>
-                        <td className="px-5 py-3 text-xs font-bold">
-                          {p.supplierName || "N/A"}
-                        </td>
-                        <td className="px-5 py-3 text-xs">
-                          {p.itemName || "N/A"}
-                        </td>
-                        <td className="px-5 py-3 text-center text-xs font-bold">
-                          {p.qty || 0}
-                        </td>
-                        <td className="px-5 py-3 text-right text-xs font-black text-amber-600 dark:text-amber-300">
-                          {money(Number(p.totalCost || 0))}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </section>
 
         <footer className="mt-5 flex flex-col gap-1 px-1 text-[10px] text-slate-400 sm:flex-row sm:items-center sm:justify-between">

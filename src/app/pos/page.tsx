@@ -3,8 +3,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, updateDoc, addDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, runTransaction, getDoc, setDoc } from "firebase/firestore";
 import { Product } from "@/types/product";
+import ReceiptTemplate from "@/components/ReceiptTemplate";
 import { 
   ShoppingCart, 
   Search, 
@@ -15,28 +16,85 @@ import {
   Tag, 
   Layers, 
   SlidersHorizontal,
-  Store
+  BookmarkPlus,
+  FolderOpen,
+  Trash2,
+  X
 } from "lucide-react";
 
 interface CartItem extends Product {
   cartQty: number;
 }
 
+interface DraftBill {
+  id?: string;
+  title: string;
+  cart: CartItem[];
+  discount: number;
+  createdAt: any;
+}
+
 export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
-  
+  const [drafts, setDrafts] = useState<DraftBill[]>([]);
+
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
-  const [sortBy, setSortBy] = useState("latest"); // 'latest' | 'low-stock' | 'price-low' | 'price-high' | 'name-asc' | 'name-desc'
+  const [sortBy, setSortBy] = useState("latest");
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [discount, setDiscount] = useState<number>(0);
   const [cashPaid, setCashPaid] = useState<number>(0);
+  const [customerName, setCustomerName] = useState<string>(""); 
+  const [currentInvoiceNo, setCurrentInvoiceNo] = useState<number>(0);
 
-  // Firestore Data Load
+  // Draft States
+  const [draftTitle, setDraftTitle] = useState("");
+  const [showDraftsModal, setShowDraftsModal] = useState(false);
+
+  // ඔෆ්ලයින් සිදු කළ සේල්ස් ෆයර්බේස් වෙත යැවීම සහ සින්ක් කිරීම
+  const syncOfflineSales = async () => {
+    if (!navigator.onLine) return;
+    try {
+      const offlineSales = JSON.parse(localStorage.getItem("pos_offline_sales") || "[]");
+      if (offlineSales.length === 0) return;
+
+      for (const sale of offlineSales) {
+        // ඔෆ්ලයින් නිකුත් කළ නිවැරදි ඉන්වොයිස් අංකය (invoiceNo) සහිතවම ෆයර්බේස් වෙත යවයි
+        await addDoc(collection(db, "sales"), {
+          ...sale,
+          createdAt: new Date(sale.createdAt),
+        });
+
+        // ස්ටොක් ප්‍රමාණයන් ද ෆයර්බේස් හි යාවත්කාලීන කිරීම
+        for (const item of sale.items) {
+          if (item.id) {
+            try {
+              const productRef = doc(db, "products", item.id);
+              const prodSnap = await getDoc(productRef);
+              if (prodSnap.exists()) {
+                const currentStock = prodSnap.data().stockQty || 0;
+                await updateDoc(productRef, {
+                  stockQty: Math.max(0, currentStock - item.cartQty),
+                });
+              }
+            } catch (err) {
+              console.warn("Stock sync error for item:", item.id);
+            }
+          }
+        }
+      }
+
+      localStorage.removeItem("pos_offline_sales");
+      console.log("Offline sales synced successfully to Firebase!");
+    } catch (e) {
+      console.warn("Error syncing offline sales:", e);
+    }
+  };
+
   useEffect(() => {
     const unsubProducts = onSnapshot(collection(db, "products"), (snapshot) => {
       const items: Product[] = snapshot.docs.map((d) => ({
@@ -44,31 +102,105 @@ export default function POSPage() {
         ...d.data(),
       })) as Product[];
       setProducts(items);
+    }, (err) => {
+      console.warn("Products offline mode:", err);
     });
 
     const unsubCategories = onSnapshot(collection(db, "categories"), (snapshot) => {
       setCategories(snapshot.docs.map((d) => d.data().name));
+    }, (err) => {
+      console.warn("Categories offline mode:", err);
     });
 
     const unsubBrands = onSnapshot(collection(db, "brands"), (snapshot) => {
       setBrands(snapshot.docs.map((d) => d.data().name));
+    }, (err) => {
+      console.warn("Brands offline mode:", err);
     });
+
+    const unsubDrafts = onSnapshot(collection(db, "drafts"), (snapshot) => {
+      const draftList: DraftBill[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<DraftBill, "id">),
+      }));
+      setDrafts(draftList);
+    }, (err) => {
+      console.warn("Drafts offline mode:", err);
+    });
+
+    const fetchInvoiceCounter = async () => {
+      const localNo = localStorage.getItem("pos_invoice_no");
+      const localNumber = localNo !== null ? Number(localNo) : 0;
+      
+      if (!navigator.onLine) {
+        setCurrentInvoiceNo(localNumber);
+        return;
+      }
+
+      try {
+        await syncOfflineSales();
+
+        const counterDoc = await getDoc(doc(db, "settings", "invoiceCounter"));
+        if (counterDoc.exists()) {
+          const serverNo = counterDoc.data().currentNo ?? 0;
+          // ඔෆ්ලයින් එකේදී වැඩි අංකයක් ගොස් තිබේ නම්, Local අංකය ප්‍රමුඛ කරයි
+          const latestNo = Math.max(localNumber, serverNo);
+          setCurrentInvoiceNo(latestNo);
+          localStorage.setItem("pos_invoice_no", latestNo.toString());
+
+          if (localNumber > serverNo) {
+            await setDoc(doc(db, "settings", "invoiceCounter"), { currentNo: latestNo }, { merge: true });
+          }
+        } else {
+          await setDoc(doc(db, "settings", "invoiceCounter"), { currentNo: localNumber });
+          setCurrentInvoiceNo(localNumber);
+          localStorage.setItem("pos_invoice_no", localNumber.toString());
+        }
+      } catch (err) {
+        console.warn("Internet නැත. LocalStorage එකෙන් ඉන්වොයිස් අංකය ලබා ගනී...");
+        setCurrentInvoiceNo(localNumber);
+      }
+    };
+    fetchInvoiceCounter();
+
+    const handleOnlineSync = async () => {
+      if (navigator.onLine) {
+        try {
+          await syncOfflineSales();
+          const localNo = localStorage.getItem("pos_invoice_no");
+          if (localNo !== null) {
+            const num = Number(localNo);
+            const counterRef = doc(db, "settings", "invoiceCounter");
+            const counterDoc = await getDoc(counterRef);
+            const serverNo = counterDoc.exists() ? (counterDoc.data().currentNo ?? 0) : 0;
+            if (num > serverNo) {
+              await setDoc(counterRef, { currentNo: num }, { merge: true });
+            }
+          }
+        } catch (e) {
+          console.warn("Online sync error:", e);
+        }
+      }
+    };
+
+    window.addEventListener("online", handleOnlineSync);
 
     return () => {
       unsubProducts();
       unsubCategories();
       unsubBrands();
+      unsubDrafts();
+      window.removeEventListener("online", handleOnlineSync);
     };
   }, []);
 
-  // Cart Qty handling
   const handleIncreaseQty = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
     setCart((prevCart) => {
       const existing = prevCart.find((item) => item.id === product.id);
       if (existing) {
         if (existing.cartQty >= product.stockQty) {
-          alert("තොගයේ ඇති ප්‍රමාණයට වඩා වැඩි කළ නොහැක!");
+          alert("Cannot increase beyond available stock!");
           return prevCart;
         }
         return prevCart.map((item) =>
@@ -76,7 +208,7 @@ export default function POSPage() {
         );
       } else {
         if (product.stockQty <= 0) {
-          alert("මේ Item එක තොගයේ අවසන් වී ඇත!");
+          alert("This item is out of stock!");
           return prevCart;
         }
         return [...prevCart, { ...product, cartQty: 1 }];
@@ -99,67 +231,136 @@ export default function POSPage() {
     });
   };
 
-  const updateCartQty = (id: string, qty: number) => {
-    if (qty <= 0) {
-      setCart((prev) => prev.filter((item) => item.id !== id));
-      return;
-    }
-    const product = products.find(p => p.id === id);
-    if (product && qty > product.stockQty) {
-      alert("තොගයේ ඇති ප්‍රමාණයට වඩා වැඩි කළ නොහැක!");
-      return;
-    }
-    setCart((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, cartQty: qty } : item))
-    );
-  };
-
   const subTotal = cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0);
   const netTotal = Math.max(0, subTotal - discount);
   const balance = Math.max(0, cashPaid - netTotal);
 
-  const handleCheckoutAndPrint = async () => {
+  const handleSaveDraft = async () => {
     if (cart.length === 0) {
-      alert("Cart එක හිස්ව පවතී!");
+      alert("Cart is empty!");
       return;
     }
-    if (cashPaid < netTotal) {
-      alert("ලැබුණු මුදල මදි!");
+    const titleToSave = draftTitle.trim() || customerName.trim();
+    if (!titleToSave) {
+      alert("Please enter vehicle number or name!");
       return;
     }
 
     try {
-      for (const item of cart) {
-        if (item.id) {
-          const productRef = doc(db, "products", item.id);
-          await updateDoc(productRef, {
-            stockQty: item.stockQty - item.cartQty,
-          });
-        }
-      }
-
-      await addDoc(collection(db, "sales"), {
-        createdAt: new Date(),
-        items: cart,
-        subTotal,
+      await addDoc(collection(db, "drafts"), {
+        title: titleToSave,
+        cart,
         discount,
-        netTotal,
-        cashPaid,
-        balance,
+        createdAt: new Date(),
       });
-
-      window.print();
-      setCart([]);
-      setDiscount(0);
-      setCashPaid(0);
-      alert("බිල්පත සාර්ථකව නිකුත් කළා!");
+      alert("Bill saved as Draft!");
+      setDraftTitle("");
     } catch (error) {
-      console.error("Checkout Error: ", error);
-      alert("දෝෂයක් සිදු විය!");
+      console.error("Draft Save Error: ", error);
+      alert("Draft saved locally / Offline mode active.");
     }
   };
 
-  // Filter & Sort Products for POS screen
+  const handleLoadDraft = (draft: DraftBill) => {
+    setCart(draft.cart || []);
+    setDiscount(draft.discount || 0);
+    setCustomerName(draft.title || "");
+    setShowDraftsModal(false);
+    alert(`Draft "${draft.title}" loaded successfully!`);
+  };
+
+  const handleDeleteDraft = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("Are you sure you want to delete this draft bill?")) {
+      try {
+        await deleteDoc(doc(db, "drafts", id));
+      } catch (err) {
+        console.error("Delete draft error:", err);
+      }
+    }
+  };
+
+  const handleCheckoutAndPrint = async () => {
+    if (cart.length === 0) {
+      alert("Cart is empty!");
+      return;
+    }
+
+    const finalCustomerName = customerName.trim() ? customerName.trim() : "CASH CUSTOMER";
+    
+    // වත්මන් ඉන්වොයිස් අංකය ලබාගෙන, ඊළඟ අංකය සකස් කරයි
+    const assignedInvoiceNo = currentInvoiceNo;
+    const nextInvoiceNo = assignedInvoiceNo + 1;
+    
+    localStorage.setItem("pos_invoice_no", nextInvoiceNo.toString());
+    setCurrentInvoiceNo(nextInvoiceNo);
+
+    const formattedInvoiceNo = `SAP-${assignedInvoiceNo}`;
+
+    // මුද්‍රණය කිරීම (Print)
+    window.print();
+
+    const saleData = {
+      invoiceNo: formattedInvoiceNo,
+      createdAt: new Date().toISOString(),
+      customerName: finalCustomerName,
+      items: cart,
+      subTotal,
+      discount,
+      netTotal,
+      cashPaid,
+      balance,
+    };
+
+    // අන්තර්ජාලය ඇති නම් සෘජුවම ෆයර්බේස් වෙත යවයි, නැතහොත් ඔෆ්ලයින් කියු එකට එකතු කරයි
+    if (navigator.onLine) {
+      try {
+        await runTransaction(db, async (transaction) => {
+          const counterRef = doc(db, "settings", "invoiceCounter");
+          transaction.set(counterRef, { currentNo: nextInvoiceNo }, { merge: true });
+        });
+
+        for (const item of cart) {
+          if (item.id) {
+            const productRef = doc(db, "products", item.id);
+            const prodSnap = await getDoc(productRef);
+            if (prodSnap.exists()) {
+              const currentStock = prodSnap.data().stockQty || 0;
+              await updateDoc(productRef, {
+                stockQty: Math.max(0, currentStock - item.cartQty),
+              });
+            }
+          }
+        }
+
+        await addDoc(collection(db, "sales"), {
+          ...saleData,
+          createdAt: new Date(),
+        });
+      } catch (error) {
+        console.warn("Cloud sync failed, saving to offline queue.", error);
+        saveToOfflineQueue(saleData);
+      }
+    } else {
+      saveToOfflineQueue(saleData);
+    }
+
+    setCart([]);
+    setDiscount(0);
+    setCashPaid(0);
+    setCustomerName("");
+  };
+
+  const saveToOfflineQueue = (sale: any) => {
+    try {
+      const existingOffline = JSON.parse(localStorage.getItem("pos_offline_sales") || "[]");
+      existingOffline.push(sale);
+      localStorage.setItem("pos_offline_sales", JSON.stringify(existingOffline));
+    } catch (e) {
+      console.error("Error saving to offline queue:", e);
+    }
+  };
+
   const filteredProducts = useMemo(() => {
     return products
       .filter((p) => {
@@ -176,74 +377,55 @@ export default function POSPage() {
         if (sortBy === "low-stock") return (a.stockQty || 0) - (b.stockQty || 0);
         if (sortBy === "name-asc") return (a.name || "").localeCompare(b.name || "");
         if (sortBy === "name-desc") return (b.name || "").localeCompare(a.name || "");
-        
+         
         const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
         const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
         return timeB - timeA;
       });
   }, [products, search, selectedCategory, selectedBrand, sortBy]);
 
+  const currentInvoiceData = {
+    invoiceNo: `SAP-${currentInvoiceNo}`,
+    customerName: customerName.trim() ? customerName.trim() : "CASH CUSTOMER",
+    paymentMethod: "Cash",
+    items: cart,
+    subTotal: subTotal,
+    discount: discount,
+    netTotal: netTotal,
+    cashPaid: cashPaid,
+    balance: balance,
+    createdAt: new Date(),
+  };
+
   return (
     <div className="max-w-[1300px] mx-auto p-4 sm:p-6 font-sans dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-100">
-      {/* Printable Receipt Layout */}
-      <div 
-        id="receipt-print" 
-        className="hidden print:block p-2 text-black font-mono text-[11px]"
-        style={{ width: "58mm" }}
-      >
-        <div className="text-center mb-2">
-          <h2 className="text-sm font-bold uppercase">AUTO ELECTRICAL & AC</h2>
-          <p className="text-[9px]">No. 12, Main Street, Battuluoya</p>
-          <p className="text-[9px]">Tel: 07X-XXXXXXX</p>
-          <p className="text-[9px] mt-1" suppressHydrationWarning>
-            {new Date().toLocaleString()}
-          </p>
-        </div>
-        <div className="border-b border-dashed border-black my-1"></div>
-        <table className="w-full text-left text-[10px]">
-          <thead>
-            <tr className="border-b border-black">
-              <th>Item</th>
-              <th className="text-center">Qty</th>
-              <th className="text-right">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cart.map((item) => (
-              <tr key={item.id}>
-                <td className="py-0.5 truncate max-w-[28mm]">{item.name}</td>
-                <td className="text-center">{item.cartQty}</td>
-                <td className="text-right">{(item.sellingPrice * item.cartQty).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="border-b border-dashed border-black my-1"></div>
-        <div className="space-y-0.5 text-right text-[10px]">
-          <p>Subtotal: {subTotal.toLocaleString()}</p>
-          <p>Discount: {discount.toLocaleString()}</p>
-          <p className="font-bold text-xs">TOTAL: Rs. {netTotal.toLocaleString()}</p>
-          <p>Cash: {cashPaid.toLocaleString()}</p>
-          <p>Balance: {balance.toLocaleString()}</p>
-        </div>
-        <div className="border-b border-dashed border-black my-1"></div>
-        <p className="text-center mt-2 font-bold text-[10px]">THANK YOU COME AGAIN!</p>
+      
+      <div id="receipt-print" className="hidden print:block">
+        <ReceiptTemplate invoice={currentInvoiceData} />
       </div>
 
-      {/* Main Screen Layout */}
       <div className="print:hidden space-y-6">
-        <div className="flex items-center gap-3 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs">
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl">
-            <ShoppingCart className="w-6 h-6" />
+        <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl">
+              <ShoppingCart className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">Point of Sale (POS Billing)</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Next Invoice No: <span className="font-bold text-blue-600 dark:text-blue-400">#SAP-{currentInvoiceNo}</span></p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">Point of Sale (POS Billing)</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Select products to add items to order and generate bills instantly.</p>
-          </div>
+          
+          <button
+            onClick={() => setShowDraftsModal(true)}
+            className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-4 py-2.5 rounded-xl text-xs font-bold transition hover:bg-amber-100 shadow-xs"
+          >
+            <FolderOpen className="w-4 h-4" />
+            <span>Saved Drafts ({drafts.length})</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Product Filters & Grid */}
           <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="relative">
@@ -329,8 +511,8 @@ export default function POSPage() {
 
                     <div className="mt-3 flex flex-col gap-1.5">
                       <div className="flex justify-between items-center">
-                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs">Rs. {(product.sellingPrice || 0).toLocaleString()}</span>
-                        
+                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs">LKR {(product.sellingPrice || 0).toLocaleString()}</span>
+                         
                         <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-lg shadow-2xs" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={(e) => handleDecreaseQty(product, e)}
@@ -354,42 +536,26 @@ export default function POSPage() {
             </div>
           </div>
 
-          {/* Right: Cart & Billing */}
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex flex-col justify-between">
-            <div>
-              <h2 className="text-sm font-bold mb-3 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-3 flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4 text-blue-500" /> Current Order
-              </h2>
-              
-              <div className="space-y-2.5 max-h-[250px] overflow-y-auto mb-4 pr-1">
-                {cart.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center text-xs border-b border-gray-50 dark:border-gray-700/50 pb-2.5">
-                    <div className="flex-1 pr-2">
-                      <p className="font-semibold text-gray-800 dark:text-gray-200 line-clamp-1">{item.name}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">Rs. {(item.sellingPrice || 0).toLocaleString()} x {item.cartQty}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700/50 p-1 rounded-xl border border-gray-100 dark:border-gray-700">
-                      <button onClick={() => updateCartQty(item.id!, item.cartQty - 1)} className="w-6 h-6 bg-white dark:bg-gray-700 rounded-lg font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-center shadow-2xs">-</button>
-                      <span className="font-bold text-xs px-1 text-gray-800 dark:text-gray-200">{item.cartQty}</span>
-                      <button onClick={() => updateCartQty(item.id!, item.cartQty + 1)} className="w-6 h-6 bg-white dark:bg-gray-700 rounded-lg font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-center shadow-2xs">+</button>
-                    </div>
-                  </div>
-                ))}
-                {cart.length === 0 && (
-                  <p className="text-center text-gray-400 dark:text-gray-500 py-12 text-xs">Cart එක හිස්ව පවතී.</p>
-                )}
-              </div>
+          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex flex-col justify-between space-y-4">
+            
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white max-h-[350px] overflow-y-auto shadow-xs">
+              <ReceiptTemplate invoice={currentInvoiceData} />
             </div>
 
-            {/* Calculations & Checkout */}
-            <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-4 bg-gray-50/50 dark:bg-gray-700/30 p-4 rounded-xl">
-              <div className="flex justify-between text-xs font-semibold text-gray-500 dark:text-gray-400">
-                <span>Subtotal:</span>
-                <span>Rs. {subTotal.toLocaleString()}</span>
+            <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3 bg-gray-50/50 dark:bg-gray-700/30 p-4 rounded-xl">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-gray-500 dark:text-gray-400 font-semibold">Customer / Vehicle:</span>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Optional (e.g. WP-1234)"
+                  className="w-36 p-1.5 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
               <div className="flex justify-between items-center text-xs">
-                <span className="text-gray-500 dark:text-gray-400 font-semibold">Discount:</span>
+                <span className="text-gray-500 dark:text-gray-400 font-semibold">Discount (LKR):</span>
                 <input
                   type="number"
                   value={discount || ""}
@@ -399,13 +565,8 @@ export default function POSPage() {
                 />
               </div>
 
-              <div className="flex justify-between text-sm font-black text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-700 pt-2.5">
-                <span>Net Total:</span>
-                <span className="text-blue-600 dark:text-blue-400">Rs. {netTotal.toLocaleString()}</span>
-              </div>
-
               <div className="flex justify-between items-center text-xs">
-                <span className="text-gray-500 dark:text-gray-400 font-semibold">Cash Paid:</span>
+                <span className="text-gray-500 dark:text-gray-400 font-semibold">Cash Paid (LKR):</span>
                 <input
                   type="number"
                   value={cashPaid || ""}
@@ -415,9 +576,22 @@ export default function POSPage() {
                 />
               </div>
 
-              <div className="flex justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
-                <span>Balance:</span>
-                <span>Rs. {balance.toLocaleString()}</span>
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Draft title (e.g. WP-1234)"
+                    value={draftTitle}
+                    onChange={(e) => setDraftTitle(e.target.value)}
+                    className="flex-1 p-2 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <button
+                    onClick={handleSaveDraft}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs whitespace-nowrap"
+                  >
+                    <BookmarkPlus className="w-3.5 h-3.5" /> Save Draft
+                  </button>
+                </div>
               </div>
 
               <button
@@ -432,7 +606,65 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* Global Print CSS */}
+      {showDraftsModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl max-w-lg w-full shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
+              <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-amber-500" /> Saved Bill Drafts ({drafts.length})
+              </h3>
+              <button 
+                onClick={() => setShowDraftsModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {drafts.length === 0 ? (
+                <p className="text-center text-gray-400 py-10 text-xs">No draft bills available.</p>
+              ) : (
+                drafts.map((d) => {
+                  const draftTotal = d.cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0) - (d.discount || 0);
+                  return (
+                    <div 
+                      key={d.id} 
+                      className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center gap-3 hover:border-amber-400 transition"
+                    >
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-xs text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                          🚗 {d.title}
+                        </h4>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                          Items: <span className="font-semibold">{d.cart.length}</span> | Net Total: <span className="font-bold text-emerald-600 dark:text-emerald-400">LKR {draftTotal.toLocaleString()}</span>
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleLoadDraft(d)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs"
+                        >
+                          Load Bill File
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteDraft(d.id!, e)}
+                          className="bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 p-1.5 rounded-xl text-xs transition"
+                          title="Delete Draft"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx global>{`
         @media print {
           body * {

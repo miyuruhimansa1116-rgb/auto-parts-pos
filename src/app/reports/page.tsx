@@ -3,7 +3,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { collection, onSnapshot, deleteDoc, doc, getDocs } from "firebase/firestore";
+import ReceiptTemplate from "@/components/ReceiptTemplate";
 import { 
   BarChart3, 
   Printer, 
@@ -25,7 +26,6 @@ import {
   Layers,
   Receipt,
   Sparkles,
-  ShieldCheck,
   FileText
 } from "lucide-react";
 
@@ -64,7 +64,7 @@ export default function SalesReportsPage() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Get User Role and Theme preference on load
+  // Get User Role, Theme preference and Business Settings on load
   useEffect(() => {
     const role = localStorage.getItem("userRole") || "counter";
     setUserRole(role);
@@ -82,46 +82,101 @@ export default function SalesReportsPage() {
     localStorage.setItem("theme", newMode ? "dark" : "light");
   };
 
-  // Fetch Sales Data
+  // Fetch Sales Data (Online Firestore + LocalStorage Offline Sales with Duplicate Prevention)
   useEffect(() => {
-    const unsubSales = onSnapshot(collection(db, "sales"), (snapshot) => {
-      const list: SaleTransaction[] = [];
-      const catSet = new Set<string>();
+    const fetchSalesReports = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "sales"));
+        let allSales: SaleTransaction[] = [];
+        const catSet = new Set<string>();
+        const seenUniqueKeys = new Set<string>(); // එකම ඉන්වොයිස් අංකය සහ එකම වේලාව ඇති වාර්තා පෙරීමට
 
-      snapshot.docs.forEach((docSnap) => {
-        const data = docSnap.data();
-        const docId = docSnap.id;
-        const invoiceNo = data.invoiceNo || docId.slice(0, 6).toUpperCase();
-        const customerName = data.customerName || "Cash Customer";
-        const paymentMethod = data.paymentMethod || "Cash";
-        const items = Array.isArray(data.items) ? data.items : [];
-        
-        items.forEach((it: any) => {
-          if (it.category) catSet.add(it.category);
+        const processAndPushSale = (data: any, docId: string) => {
+          const invoiceNo = data.invoiceNo || docId.slice(0, 6).toUpperCase();
+          
+          // වේලාව (Timestamp) නිවැරදිව ලබා ගැනීම
+          let rawCreatedAt = data.createdAt;
+          let timeKey = "";
+          if (rawCreatedAt?.toDate) {
+            timeKey = rawCreatedAt.toDate().toISOString();
+          } else if (rawCreatedAt) {
+            timeKey = new Date(rawCreatedAt).toISOString();
+          } else {
+            timeKey = new Date().toISOString();
+          }
+
+          // Invoice Number එක සහ CreatedTime එක එකතු කර Unique Key එකක් සෑදීම
+          const uniqueKey = `${invoiceNo}_${timeKey}`;
+          
+          // දැනටමත් මෙම uniqueKey එක ලැයිස්තුවට එකතු වී ඇත්නම්, මෙය මඟ හරින්න (duplicate එකක් ලෙස ඉවත් වේ)
+          if (seenUniqueKeys.has(uniqueKey)) {
+            return;
+          }
+          seenUniqueKeys.add(uniqueKey);
+
+          const customerName = data.customerName || "Cash Customer";
+          const paymentMethod = data.paymentMethod || "Cash";
+          const items = Array.isArray(data.items) ? data.items : [];
+          
+          items.forEach((it: any) => {
+            if (it.category) catSet.add(it.category);
+          });
+
+          const netTotal = Number(data.netTotal || data.totalAmount || items.reduce((acc, curr) => acc + (Number(curr.total || curr.sellingPrice || 0) * Number(curr.qty || curr.cartQty || 1)), 0));
+
+          allSales.push({
+            id: docId,
+            invoiceNo,
+            customerName,
+            paymentMethod,
+            items,
+            netTotal,
+            subTotal: Number(data.subTotal || netTotal),
+            discount: Number(data.discount || 0),
+            cashPaid: Number(data.cashPaid || netTotal),
+            balance: Number(data.balance || 0),
+            createdAt: rawCreatedAt,
+          });
+        };
+
+        // 1. ෆයර්බේස් එකෙන් ඔන්ලයින් සේල්ස් ලබා ගැනීම
+        querySnapshot.docs.forEach((docSnap) => {
+          processAndPushSale(docSnap.data(), docSnap.id);
         });
 
-        const netTotal = Number(data.netTotal || data.totalAmount || items.reduce((acc, curr) => acc + (Number(curr.total || curr.sellingPrice || 0) * Number(curr.qty || curr.cartQty || 1)), 0));
+        // 2. LocalStorage එකේ ඇති ඔෆ්ලයින් සේල්ස් ලබා ගැනීම
+        const offlineSales = JSON.parse(localStorage.getItem("pos_offline_sales") || "[]");
+        const remainingOfflineSales: any[] = [];
 
-        list.push({
-          id: docId,
-          invoiceNo,
-          customerName,
-          paymentMethod,
-          items,
-          netTotal,
-          subTotal: Number(data.subTotal || netTotal),
-          discount: Number(data.discount || 0),
-          cashPaid: Number(data.cashPaid || netTotal),
-          balance: Number(data.balance || 0),
-          createdAt: data.createdAt,
+        offlineSales.forEach((data: any) => {
+          const docId = data.id || `offline_${Math.random()}`;
+          const invoiceNo = data.invoiceNo || docId.slice(0, 6).toUpperCase();
+
+          let rawCreatedAt = data.createdAt || new Date().toISOString();
+          let timeKey = rawCreatedAt?.toDate ? rawCreatedAt.toDate().toISOString() : new Date(rawCreatedAt).toISOString();
+          const uniqueKey = `${invoiceNo}_${timeKey}`;
+
+          // මෙය දැනටමත් seenUniqueKeys වල ඇත්නම් (Online සමමුහුර්ත වී ඇත්නම් හෝ ඩුප්ලිකේට් නම්)
+          if (seenUniqueKeys.has(uniqueKey)) {
+            return; 
+          }
+
+          remainingOfflineSales.push(data);
+          processAndPushSale(data, docId);
         });
-      });
 
-      setSales(list);
-      setCategories(Array.from(catSet));
-    });
+        // දැනටමත් ඔන්ලයින් සමමුහුර්ත වූ හෝ ඩුප්ලිකේට් වූ ඔෆ්ලයින් බිල්පත් LocalStorage එකෙන් ඉවත් කිරීම
+        localStorage.setItem("pos_offline_sales", JSON.stringify(remainingOfflineSales));
 
-    return () => unsubSales();
+        // 3. එකතු කළ ලැයිස්තුව සෙට් කිරීම
+        setSales(allSales);
+        setCategories(Array.from(catSet));
+      } catch (error) {
+        console.error("Error fetching sales reports: ", error);
+      }
+    };
+
+    fetchSalesReports();
   }, []);
 
   // Delete Sale Invoice Function (Restricted to Admin only)
@@ -129,18 +184,29 @@ export default function SalesReportsPage() {
     e.stopPropagation();
 
     if (userRole !== "admin") {
-      alert("මෙම ක්‍රියාව (Delete කිරීම) සඳහා ඔබට අවසර නැත! (Admin පමණයි)");
+      alert("You do not have permission for this action! (Admin only)");
       return;
     }
 
-    if (confirm("මෙම සම්පූර්ණ බිල්පත (Invoice) සහ එහි විකුණුම් වාර්තාව මකා දැමීමට අවශ්‍ය බව තහවුරු කරන්නද?")) {
+    if (confirm("Are you sure you want to completely delete this invoice and its sales record?")) {
       try {
+        if (docId.startsWith("offline_")) {
+          const offlineSales = JSON.parse(localStorage.getItem("pos_offline_sales") || "[]");
+          const updatedOffline = offlineSales.filter((s: any) => s.id !== docId);
+          localStorage.setItem("pos_offline_sales", JSON.stringify(updatedOffline));
+          setSales(sales.filter((s) => s.id !== docId));
+          if (selectedInvoice?.id === docId) setSelectedInvoice(null);
+          alert("Offline invoice successfully deleted!");
+          return;
+        }
+
         await deleteDoc(doc(db, "sales", docId));
+        setSales(sales.filter((s) => s.id !== docId));
         if (selectedInvoice?.id === docId) setSelectedInvoice(null);
-        alert("බිල්පත සාර්ථකව මකා දමන ලදී!");
+        alert("Invoice successfully deleted!");
       } catch (error) {
         console.error("Error deleting sale: ", error);
-        alert("බිල්පත මකා දැමීමේදී දෝෂයක් ඇති විය!");
+        alert("An error occurred while deleting the invoice!");
       }
     }
   };
@@ -262,7 +328,7 @@ export default function SalesReportsPage() {
   const exportCSV = () => {
     const headers = ["Date,Invoice #,Customer,Payment Method,Total Items,Net Total\n"];
     const rows = filteredSales.map((s) => {
-      const d = s.createdAt?.toDate ? s.createdAt.toDate().toLocaleDateString() : "";
+      const d = s.createdAt?.toDate ? s.createdAt.toDate().toLocaleDateString() : new Date(s.createdAt || Date.now()).toLocaleDateString();
       const totalItemsCount = s.items.reduce((acc, curr) => acc + Number(curr.cartQty || curr.qty || 1), 0);
       return `"${d}","${s.invoiceNo}","${s.customerName}","${s.paymentMethod}",${totalItemsCount},${s.netTotal}\n`;
     });
@@ -302,11 +368,10 @@ export default function SalesReportsPage() {
               top: 0 !important;
               width: 80mm !important;
               margin: 0 !important;
-              padding: 5px !important;
+              padding: 0 !important;
               background: white !important;
               color: black !important;
               box-shadow: none !important;
-              font-family: 'Courier New', Courier, monospace !important;
             }
             .no-print {
               display: none !important;
@@ -321,13 +386,9 @@ export default function SalesReportsPage() {
               <BarChart3 className="w-7 h-7 text-blue-600 dark:text-blue-400" />
               Sales Analytics & Reports
             </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> පාරිභෝගිකයින්ගේ විකුණුම් තොරතුරු සහ ආදායම් සවිස්තරාත්මකව විශ්ලේෂණය කරන්න.
-            </p>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Dark Mode Toggle Button */}
             <button
               onClick={toggleDarkMode}
               className="bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 p-2.5 rounded-xl transition shadow-sm border border-gray-300 dark:border-gray-600 flex items-center gap-1.5 text-xs font-semibold"
@@ -447,8 +508,18 @@ export default function SalesReportsPage() {
                   placeholder="Search invoice, item, part # or customer..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 p-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full pl-9 pr-9 p-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -463,7 +534,6 @@ export default function SalesReportsPage() {
             <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-2">
               Rs. {metrics.totalRevenue.toLocaleString()}
             </div>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">තෝරාගත් කාලසීමාව සඳහා</p>
           </div>
 
           <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 border-l-4 border-l-emerald-600 shadow-sm transition-all hover:shadow-md">
@@ -473,7 +543,6 @@ export default function SalesReportsPage() {
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-2">
               {metrics.totalQty.toLocaleString()} <span className="text-sm font-semibold">Items</span>
             </div>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">අලෙවි වූ එකතු එකතුව</p>
           </div>
 
           <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 border-l-4 border-l-purple-600 shadow-sm transition-all hover:shadow-md">
@@ -483,7 +552,6 @@ export default function SalesReportsPage() {
             <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-2">
               {metrics.totalOrders} <span className="text-sm font-semibold">Orders</span>
             </div>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">නිකුත් කළ බිල්පත් සංඛ්‍යාව</p>
           </div>
 
           <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 border-l-4 border-l-amber-500 shadow-sm transition-all hover:shadow-md">
@@ -493,7 +561,6 @@ export default function SalesReportsPage() {
             <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-2">
               Rs. {metrics.totalProfit.toLocaleString()}
             </div>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">විකුණුම්වලින් ලැබූ ලාභය</p>
           </div>
         </div>
 
@@ -507,7 +574,7 @@ export default function SalesReportsPage() {
 
             <div className="mt-3 space-y-3">
               {categoryBreakdown.length === 0 ? (
-                <p className="text-center py-6 text-xs text-gray-400">දත්ත නොමැත</p>
+                <p className="text-center py-6 text-xs text-gray-400">No data</p>
               ) : (
                 categoryBreakdown.map((cat) => {
                   const percentage = metrics.totalRevenue > 0 ? (cat.amount / metrics.totalRevenue) * 100 : 0;
@@ -537,7 +604,7 @@ export default function SalesReportsPage() {
 
             <div className="mt-3 space-y-3">
               {topItems.length === 0 ? (
-                <p className="text-center py-6 text-xs text-gray-400">දත්ත නොමැත</p>
+                <p className="text-center py-6 text-xs text-gray-400">No data</p>
               ) : (
                 topItems.map((item, idx) => (
                   <div key={item.name} className="flex justify-between items-center text-xs border-b border-gray-100 dark:border-gray-800 pb-2.5 last:border-0">
@@ -564,9 +631,6 @@ export default function SalesReportsPage() {
             <h2 className="font-bold text-base text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
               <ClipboardList className="w-4 h-4 text-purple-500" /> Sales Register ({filteredSales.length} Invoices)
             </h2>
-            <span className="text-xs text-gray-500 dark:text-gray-300 font-medium">
-              💡 පාරිභෝගික බිල්පත් විස්තර බැලීමට අදාළ Row එක මත Click කරන්න
-            </span>
           </div>
 
           <div className="overflow-x-auto">
@@ -586,7 +650,7 @@ export default function SalesReportsPage() {
                 {filteredSales.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center py-8 text-gray-400">
-                      තෝරාගත් පරාමිතීන්ට අදාළව විකුණුම් වාර්තා කිසිවක් හමු නොවීය.
+                      No sales records found for the selected parameters.
                     </td>
                   </tr>
                 ) : (
@@ -653,7 +717,6 @@ export default function SalesReportsPage() {
         {selectedInvoice && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh] border border-gray-200 dark:border-gray-600">
-              {/* Modal Header */}
               <div className="bg-gray-900 dark:bg-gray-950 text-white p-3.5 flex justify-between items-center no-print border-b border-gray-800">
                 <div>
                   <h3 className="font-bold text-sm flex items-center gap-1.5">
@@ -668,77 +731,10 @@ export default function SalesReportsPage() {
                 </button>
               </div>
 
-              {/* Modal Body / POS Receipt Styled Format */}
-              <div className="p-6 overflow-y-auto space-y-3 printable-receipt bg-white text-black font-mono text-xs">
-                <div className="text-center border-b pb-2 space-y-0.5">
-                  <h2 className="font-bold text-sm tracking-wider">AUTO ELECTRICAL & AC</h2>
-                  <p className="text-[10px]">No. 12, Main Street, Battuluoya</p>
-                  <p className="text-[10px]">Tel: 07X-XXXXXXX</p>
-                  <p className="text-[10px] mt-1">
-                    {selectedInvoice.createdAt?.toDate
-                      ? selectedInvoice.createdAt.toDate().toLocaleString()
-                      : new Date().toLocaleString()}
-                  </p>
-                </div>
-
-                {/* Items Table matching POS layout */}
-                <table className="w-full text-left text-[11px] border-collapse">
-                  <thead>
-                    <tr className="border-b border-dashed border-gray-400">
-                      <th className="py-1">Item</th>
-                      <th className="py-1 text-center">Qty</th>
-                      <th className="py-1 text-right">Price</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-dashed divide-gray-300">
-                    {selectedInvoice.items.map((item: any, idx: number) => {
-                      const qty = Number(item.cartQty || item.qty || 1);
-                      const price = Number(item.sellingPrice || item.price || 0);
-                      return (
-                        <tr key={idx}>
-                          <td className="py-1 font-medium">
-                            {item.name || item.itemName}
-                          </td>
-                          <td className="py-1 text-center">{qty}</td>
-                          <td className="py-1 text-right">{price.toLocaleString()}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                {/* Totals Section */}
-                <div className="border-t border-dashed border-gray-400 pt-2 space-y-1 text-[11px]">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>{selectedInvoice.subTotal.toLocaleString()}</span>
-                  </div>
-                  {selectedInvoice.discount > 0 && (
-                    <div className="flex justify-between">
-                      <span>Discount:</span>
-                      <span>-{selectedInvoice.discount.toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-xs border-t border-dashed border-gray-400 pt-1">
-                    <span>TOTAL: Rs.</span>
-                    <span>{selectedInvoice.netTotal.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-gray-600">
-                    <span>Cash:</span>
-                    <span>{selectedInvoice.cashPaid.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-gray-600">
-                    <span>Balance:</span>
-                    <span>{selectedInvoice.balance.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <div className="text-center border-t border-dashed border-gray-400 pt-3 text-[10px] font-bold">
-                  THANK YOU COME AGAIN!
-                </div>
+              <div className="p-4 overflow-y-auto printable-receipt bg-white text-black flex justify-center">
+                <ReceiptTemplate invoice={selectedInvoice} />
               </div>
 
-              {/* Modal Footer (Actions) */}
               <div className="bg-gray-50 dark:bg-gray-900 p-3.5 border-t border-gray-200 dark:border-gray-600 flex justify-end gap-2 no-print">
                 <button
                   onClick={() => setSelectedInvoice(null)}

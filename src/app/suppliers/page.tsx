@@ -35,7 +35,7 @@ export default function SuppliersPage() {
   const handleAddSupplier = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert("කරුණාකර සැපයුම්කරුගේ නම ඇතුළත් කරන්න!");
+      alert("Please enter the supplier name!");
       return;
     }
 
@@ -49,15 +49,15 @@ export default function SuppliersPage() {
       setName("");
       setPhone("");
       setAddress("");
-      alert("სැපයුම්කරු සාර්ථකව එකතු කළා!");
+      alert("Supplier added successfully!");
     } catch (err) {
       console.error(err);
-      alert("දෝෂයක් සිදු විය!");
+      alert("An error occurred!");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("මෙම සැපයුම්කරු මකා දැමීමට තහවුරු කරන්නද?")) {
+    if (confirm("Are you sure you want to delete this supplier?")) {
       await deleteDoc(doc(db, "suppliers", id));
     }
   };

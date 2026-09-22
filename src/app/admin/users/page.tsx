@@ -65,12 +65,12 @@ export default function UserManagementPage() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (currentUserRole !== "admin") {
-      alert("මෙම ක්‍රියාව සඳහා අවසර ඇත්තේ Admin කෙනෙකුට පමණි!");
+      alert("Only an Admin is authorized for this action!");
       return;
     }
 
     if (!newUsername || !newPassword) {
-      alert("කරුණාකර Username සහ Password ඇතුළත් කරන්න!");
+      alert("Please enter Username and Password!");
       return;
     }
 
@@ -85,14 +85,14 @@ export default function UserManagementPage() {
         createdAt: new Date().toISOString(),
       });
 
-      alert(`යූසර් '${userId}' සාර්ථකව සාදන ලදී!`);
+      alert(`User '${userId}' successfully created!`);
       setNewUsername("");
       setNewPassword("");
       setNewRole("counter");
       fetchUsers();
     } catch (error) {
       console.error("Error creating user:", error);
-      alert("යූසර් සෑදීමේදී දෝෂයක් ඇති විය.");
+      alert("An error occurred while creating the user.");
     } finally {
       setCreating(false);
     }
@@ -115,7 +115,7 @@ export default function UserManagementPage() {
   // Save Edited User
   const handleSaveEdit = async (oldUserId: string) => {
     if (!editPassword.trim()) {
-      alert("පාස්වර්ඩ් එක හිස් විය නොහැක!");
+      alert("Password cannot be empty!");
       return;
     }
 
@@ -124,12 +124,12 @@ export default function UserManagementPage() {
         password: editPassword,
       });
 
-      alert("යූසර් තොරතුරු සාර්ථකව යාවත්කාලීන කරන ලදී!");
+      alert("User information updated successfully!");
       setEditingUserId(null);
       fetchUsers();
     } catch (error) {
       console.error("Error updating user:", error);
-      alert("යාවත්කාලීන කිරීමේදී දෝෂයක් ඇති විය!");
+      alert("An error occurred while updating!");
     }
   };
 
@@ -138,14 +138,22 @@ export default function UserManagementPage() {
     if (currentUserRole !== "admin") return;
     const updatedRole = currentRole === "admin" ? "counter" : "admin";
 
-    if (confirm(`User '${userId}' ගේ role එක '${updatedRole}' ලෙස වෙනස් කිරීමට අවශ්‍ය බව තහවුරු කරන්නද?`)) {
+    if (currentRole === "admin" && updatedRole === "counter") {
+      const adminCount = users.filter((u) => u.role === "admin").length;
+      if (adminCount <= 1) {
+        alert("⚠️ There must be at least one Admin in the system! Therefore, the role of the only Admin account cannot be changed.");
+        return;
+      }
+    }
+
+    if (confirm(`Are you sure you want to change the role of User '${userId}' to '${updatedRole}'?`)) {
       try {
         await updateDoc(doc(db, "systemUsers", userId), { role: updatedRole });
-        alert("Role එක සාර්ථකව යාවත්කාලීන කරන ලදී!");
+        alert("Role updated successfully!");
         fetchUsers();
       } catch (error) {
         console.error("Error updating role:", error);
-        alert("දෝෂයක් ඇති විය!");
+        alert("An error occurred!");
       }
     }
   };
@@ -153,23 +161,27 @@ export default function UserManagementPage() {
   // Delete User
   const handleDeleteUser = async (userId: string) => {
     if (currentUserRole !== "admin") {
-      alert("ප්‍රවේශය ප්‍රතික්ෂේප විය!");
+      alert("Access denied!");
       return;
     }
 
-    if (userId === "miyuru07") {
-      alert("ප්‍රධාන Admin යූසර්වරයා මකා දැමිය නොහැක!");
-      return;
+    const targetUser = users.find((u) => u.id === userId);
+    if (targetUser && targetUser.role === "admin") {
+      const adminCount = users.filter((u) => u.role === "admin").length;
+      if (adminCount <= 1) {
+        alert("⚠️ There must be at least one Admin in the system! Therefore, the only remaining Admin account cannot be removed.");
+        return;
+      }
     }
 
-    if (confirm(`User '${userId}' සම්පූර්ණයෙන්ම මකා දැමීමට අවශ්‍යද?`)) {
+    if (confirm(`Do you want to completely delete User '${userId}'?`)) {
       try {
         await deleteDoc(doc(db, "systemUsers", userId));
-        alert("යූසර්වරයා සාර්ථකව මකා දමන ලදී!");
+        alert("User deleted successfully!");
         fetchUsers();
       } catch (error) {
         console.error("Error deleting user:", error);
-        alert("මකා දැමීමේදී දෝෂයක් ඇති විය!");
+        alert("An error occurred while deleting!");
       }
     }
   };
@@ -178,7 +190,7 @@ export default function UserManagementPage() {
     return (
       <div className="p-8 text-center text-red-600 dark:text-red-400 font-bold text-base bg-gray-50 dark:bg-gray-950 min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5" /> මෙම පිටුවට පිවිසීමට ඔබට Admin බලතල නැත!
+          <AlertTriangle className="w-5 h-5" /> You do not have Admin privileges to access this page!
         </div>
       </div>
     );
@@ -190,8 +202,7 @@ export default function UserManagementPage() {
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
           <Users className="w-7 h-7 text-blue-600 dark:text-blue-400" /> System User Management
         </h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400">පද්ධතියේ පරිශීලකයන් (Users) එකතු කිරීම, රෝල්ස් වෙනස් කිරීම, තොරතුරු බලා එඩිට් කිරීම සහ ඉවත් කිරීම.</p>
-      </div>
+        </div>
 
       {/* Add New User Form */}
       <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4 transition-colors">
@@ -263,9 +274,9 @@ export default function UserManagementPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="text-center py-6 text-gray-400 dark:text-gray-500">ලෝඩ් වෙමින් පවතී...</td></tr>
+                <tr><td colSpan={5} className="text-center py-6 text-gray-400 dark:text-gray-500">Loading...</td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-6 text-gray-400 dark:text-gray-500">යූසර්වරුන් හමු නොවීය.</td></tr>
+                <tr><td colSpan={5} className="text-center py-6 text-gray-400 dark:text-gray-500">No users found.</td></tr>
               ) : (
                 users.map((u) => {
                   const isEditing = editingUserId === u.id;
@@ -341,14 +352,12 @@ export default function UserManagementPage() {
                             >
                               <Key className="w-3.5 h-3.5" /> Toggle Role
                             </button>
-                            {u.username !== "miyuru07" && (
-                              <button
-                                onClick={() => handleDeleteUser(u.username)}
-                                className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-950/50 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white px-2.5 py-1 rounded text-[11px] font-bold transition border border-red-200 dark:border-red-900 inline-flex items-center gap-1"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" /> Delete
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleDeleteUser(u.username)}
+                              className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-950/50 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white px-2.5 py-1 rounded text-[11px] font-bold transition border border-red-200 dark:border-red-900 inline-flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </button>
                           </>
                         )}
                       </td>

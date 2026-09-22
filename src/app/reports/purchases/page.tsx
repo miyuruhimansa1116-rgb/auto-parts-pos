@@ -8,11 +8,14 @@ import {
   Download,
   Printer,
   Search,
+  X,
   Building2,
   Tag,
   Award,
   ClipboardList,
   Trash2,
+  Calendar,
+  Filter,
 } from "lucide-react";
 
 interface PurchaseItem {
@@ -70,17 +73,17 @@ export default function PurchaseReportsPage() {
     e.stopPropagation();
 
     if (userRole !== "admin") {
-      alert("මෙම මිලදී ගැනීමේ වාර්තාව (Delete කිරීම) ඉවත් කිරීමට ඔබට අවසර නැත! (Admin පමණයි)");
+      alert("You do not have permission to remove this purchase record! (Admin only)");
       return;
     }
 
-    if (confirm("මෙම මිලදී ගැනීමේ වාර්තාව (Purchase Record) සම්පූර්ණයෙන්ම මකා දැමීමට අවශ්‍ය බව තහවුරු කරන්නද?")) {
+    if (confirm("Are you sure you want to completely delete this purchase record?")) {
       try {
         await deleteDoc(doc(db, "purchases", docId));
-        alert("මිලදී ගැනීමේ වාර්තාව සාර්ථකව මකා දමන ලදී!");
+        alert("Purchase record successfully deleted!");
       } catch (error) {
         console.error("Error deleting purchase: ", error);
-        alert("වාර්තාව මකා දැමීමේදී දෝෂයක් ඇති විය!");
+        alert("An error occurred while deleting the record!");
       }
     }
   };
@@ -225,7 +228,7 @@ export default function PurchaseReportsPage() {
   // Export to CSV Function
   const exportToCSV = () => {
     if (filteredPurchases.length === 0) {
-      alert("වාර්තා සටහන් කිසිවක් නැත!");
+      alert("No report records found!");
       return;
     }
 
@@ -256,7 +259,7 @@ export default function PurchaseReportsPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500 dark:text-gray-400 font-semibold">ලෝඩ් වෙමින් පවතී...</div>;
+    return <div className="p-8 text-center text-gray-500 dark:text-gray-400 font-semibold">Loading...</div>;
   }
 
   return (
@@ -268,8 +271,7 @@ export default function PurchaseReportsPage() {
             <BarChart3 className="w-7 h-7 text-blue-600 dark:text-blue-400" />
             Purchase Analytics & Reports
           </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">සැපයුම්කරුවන්ගෙන් මිලදී ගත් භාණ්ඩ සහ වියදම් සවිස්තරාත්මකව විශ්ලේෂණය කරන්න.</p>
-        </div>
+          </div>
 
         <div className="flex gap-2">
           <button
@@ -294,15 +296,17 @@ export default function PurchaseReportsPage() {
         <p className="text-[10px] text-gray-500">Generated on: {new Date().toLocaleString()}</p>
       </div>
 
-      {/* Filters Bar */}
+      {/* Filters Bar - Updated with Clean Icons & Styling */}
       <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3 print:hidden transition-colors">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Preset Range:</span>
+          <span className="text-xs font-bold text-gray-600 dark:text-gray-400 flex items-center gap-1">
+            <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Preset Range:
+          </span>
           <button
             onClick={() => setDateRange("today")}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition ${
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
               dateRange === "today"
-                ? "bg-blue-600 text-white dark:bg-blue-500"
+                ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             }`}
           >
@@ -310,9 +314,9 @@ export default function PurchaseReportsPage() {
           </button>
           <button
             onClick={() => setDateRange("yesterday")}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition ${
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
               dateRange === "yesterday"
-                ? "bg-blue-600 text-white dark:bg-blue-500"
+                ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             }`}
           >
@@ -320,9 +324,9 @@ export default function PurchaseReportsPage() {
           </button>
           <button
             onClick={() => setDateRange("7days")}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition ${
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
               dateRange === "7days"
-                ? "bg-blue-600 text-white dark:bg-blue-500"
+                ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             }`}
           >
@@ -330,9 +334,9 @@ export default function PurchaseReportsPage() {
           </button>
           <button
             onClick={() => setDateRange("thisMonth")}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition ${
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
               dateRange === "thisMonth"
-                ? "bg-blue-600 text-white dark:bg-blue-500"
+                ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             }`}
           >
@@ -340,9 +344,9 @@ export default function PurchaseReportsPage() {
           </button>
           <button
             onClick={() => setDateRange("custom")}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition ${
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
               dateRange === "custom"
-                ? "bg-blue-600 text-white dark:bg-blue-500"
+                ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             }`}
           >
@@ -351,36 +355,38 @@ export default function PurchaseReportsPage() {
         </div>
 
         {/* Custom Date Pickers & Dropdown Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-3 border-t border-gray-200 dark:border-gray-800">
           {dateRange === "custom" && (
             <>
               <div>
-                <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 block">Start Date</label>
+                <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 block mb-1">Start Date</label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full p-1.5 border border-gray-300 dark:border-gray-700 rounded text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 block">End Date</label>
+                <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 block mb-1">End Date</label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full p-1.5 border border-gray-300 dark:border-gray-700 rounded text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
                 />
               </div>
             </>
           )}
 
           <div>
-            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 block">Filter Supplier</label>
+            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-1">
+              <Filter className="w-3 h-3 text-purple-500" /> Filter Supplier
+            </label>
             <select
               value={selectedSupplier}
               onChange={(e) => setSelectedSupplier(e.target.value)}
-              className="w-full p-1.5 border border-gray-300 dark:border-gray-700 rounded text-xs font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+              className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
             >
               <option value="all">All Suppliers</option>
               {suppliersList.map((sup, idx) => (
@@ -390,11 +396,13 @@ export default function PurchaseReportsPage() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 block">Filter Category</label>
+            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-1">
+              <Tag className="w-3 h-3 text-purple-500" /> Filter Category
+            </label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full p-1.5 border border-gray-300 dark:border-gray-700 rounded text-xs font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+              className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
             >
               <option value="all">All Categories</option>
               {categoriesList.map((cat, idx) => (
@@ -404,16 +412,28 @@ export default function PurchaseReportsPage() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 block">Search Keyword</label>
+            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-1">
+              <Search className="w-3 h-3 text-emerald-500" /> Search Keyword
+            </label>
             <div className="relative">
               <input
                 type="text"
                 placeholder="Search name / part #..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full p-1.5 pl-7 border border-gray-300 dark:border-gray-700 rounded text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                className="w-full p-2 pl-7 pr-7 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
               />
-              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-2" />
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -422,35 +442,35 @@ export default function PurchaseReportsPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-blue-600 transition-colors">
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">TOTAL EXPENSE (මුළු වියදම)</span>
+          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">TOTAL EXPENSE</span>
           <span className="text-2xl font-black text-blue-700 dark:text-blue-400 mt-1 block">
             Rs. {totalExpense.toLocaleString()}
           </span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block">තෝරාගත් කාලසීමාව සඳහා</span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block"></span>
         </div>
 
         <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-emerald-600 transition-colors">
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">UNITS PURCHASED (මිලදීගත් ප්‍රමාණය)</span>
+          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">UNITS PURCHASED</span>
           <span className="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-1 block">
             {totalQtyBought.toLocaleString()} <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Items</span>
           </span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block">තොගයට එකතු වූ මුළු ඒකක</span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block"></span>
         </div>
 
         <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-purple-600 transition-colors">
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">PURCHASE ORDERS (වාර ගණන)</span>
+          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">PURCHASE ORDERS</span>
           <span className="text-2xl font-black text-purple-700 dark:text-purple-400 mt-1 block">
             {totalTransactions} <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Orders</span>
           </span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block">මිලදීගැනීම් සටහන් සංඛ්‍යාව</span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block"></span>
         </div>
 
         <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-amber-600 transition-colors">
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">AVG ORDER VALUE (සාමාන්‍ය අගය)</span>
+          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">AVG ORDER VALUE</span>
           <span className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-1 block">
             Rs. {Math.round(avgOrderValue).toLocaleString()}
           </span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block">එක් මිලදී ගැනීමකට සාමාන්‍යයෙන්</span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block"></span>
         </div>
       </div>
 
@@ -464,7 +484,7 @@ export default function PurchaseReportsPage() {
           </h2>
           <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
             {supplierBreakdown.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">දත්ත නොමැත</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">No data</p>
             ) : (
               supplierBreakdown.map((sup, idx) => (
                 <div key={idx} className="space-y-1">
@@ -491,7 +511,7 @@ export default function PurchaseReportsPage() {
           </h2>
           <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
             {categoryBreakdown.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">දත්ත නොමැත</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">No data</p>
             ) : (
               categoryBreakdown.map((cat, idx) => (
                 <div key={idx} className="space-y-1">
@@ -518,7 +538,7 @@ export default function PurchaseReportsPage() {
           </h2>
           <div className="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
             {topProducts.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">දත්ත නොමැත</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">No data</p>
             ) : (
               topProducts.map((prod, idx) => (
                 <div key={idx} className="flex justify-between items-center text-xs p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-800">
@@ -567,7 +587,7 @@ export default function PurchaseReportsPage() {
               {filteredPurchases.length === 0 ? (
                 <tr>
                   <td colSpan={userRole === "admin" ? 9 : 8} className="text-center py-8 text-gray-400 dark:text-gray-500">
-                    තෝරාගත් පරාමිතීන්ට අදාළව මිලදී ගැනීමේ සටහන් කිසිවක් හමු නොවීය.
+                    No purchase records were found for the selected parameters
                   </td>
                 </tr>
               ) : (
@@ -596,7 +616,6 @@ export default function PurchaseReportsPage() {
                         Rs. {(p.totalCost || (p.costPrice || 0) * (p.qty || 0)).toLocaleString()}
                       </td>
                       
-                      {/* DELETE BUTTON: පෙන්වන්නේ Admin ට පමණි */}
                       {userRole === "admin" && (
                         <td className="p-2.5 text-center whitespace-nowrap print:hidden">
                           <button
