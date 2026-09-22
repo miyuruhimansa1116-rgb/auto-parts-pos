@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Auto Electrical POS System",
+  title: "Sampath Auto Parts",
   description: "POS and Inventory Management System",
 };
 
