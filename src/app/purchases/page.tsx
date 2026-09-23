@@ -1,7 +1,7 @@
 // src/app/purchases/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -34,9 +34,8 @@ import {
   Hash,
   Layers,
   Store,
-  ArrowUpDown,
-  Sparkles,
   SlidersHorizontal,
+  Sparkles,
 } from "lucide-react";
 
 interface ItemOption {
@@ -106,6 +105,10 @@ export default function PurchasesPage() {
   const [filterBrand, setFilterBrand] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
 
+  // References for Keyboard Navigation & Focus Management
+  const supplierSelectRef = useRef<HTMLSelectElement | null>(null);
+  const lastFocusedInputRef = useRef<HTMLElement | null>(null);
+
   // Date state (Default today)
   const getTodayDateStr = () => {
     const d = new Date();
@@ -115,6 +118,26 @@ export default function PurchasesPage() {
     return `${year}-${month}-${day}`;
   };
   const [purchaseDate, setPurchaseDate] = useState<string>(getTodayDateStr());
+
+  // Track last focused input element globally for screen touch/click refocusing
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      if (e.target instanceof HTMLElement) {
+        lastFocusedInputRef.current = e.target;
+      }
+    };
+    window.addEventListener("focusin", handleFocusIn);
+    return () => window.removeEventListener("focusin", handleFocusIn);
+  }, []);
+
+  // Handle global screen click/touch to restore focus to the last active input
+  const handleScreenClick = (e: React.MouseEvent) => {
+    // If clicking outside interactive form elements/buttons, restore focus to last typed input
+    const target = e.target as HTMLElement;
+    if (!target.closest("button") && !target.closest("select") && !target.closest("table") && lastFocusedInputRef.current) {
+      lastFocusedInputRef.current.focus();
+    }
+  };
 
   // 1. Fetch Purchases
   useEffect(() => {
@@ -241,7 +264,7 @@ export default function PurchasesPage() {
     }
   };
 
-  // Reset Form (මෙය දැන් සාර්ථක Purchase එකකින් පසු සම්පූර්ණයෙන්ම Clear කිරීම සඳහා පමණක් භාවිතා වේ)
+  // Reset Form
   const resetForm = () => {
     setEditingId(null);
     setOldQty(0);
@@ -361,13 +384,14 @@ export default function PurchasesPage() {
       }
 
       const totalCost = Number(qty) * Number(costPrice);
+      const finalBrand = brand && brand.trim() !== "" ? brand.trim() : "No Brand";
 
       const purchaseData = {
         supplierName: selectedSupplier,
         partNumber: partNumber.trim(),
         itemName: itemName.trim(),
         category: category || "General",
-        brand: brand || "Generic",
+        brand: finalBrand,
         qty: Number(qty),
         costPrice: Number(costPrice),
         sellingPrice: Number(sellingPrice),
@@ -394,7 +418,7 @@ export default function PurchasesPage() {
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
             category: category || prodDoc.data().category,
-            brand: brand || prodDoc.data().brand,
+            brand: finalBrand,
             isFavorite,
             ...(imageUrl ? { imageUrl } : {}),
             updatedAt: new Date(),
@@ -402,7 +426,7 @@ export default function PurchasesPage() {
         }
 
         alert("Purchase record updated successfully!");
-        resetForm(); // Edit කළ පසු Form එක Clear වේ
+        resetForm();
       } else {
         await addDoc(collection(db, "purchases"), purchaseData);
 
@@ -419,7 +443,7 @@ export default function PurchasesPage() {
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
             category: category || prodDoc.data().category,
-            brand: brand || prodDoc.data().brand,
+            brand: finalBrand,
             isFavorite,
             ...(imageUrl ? { imageUrl } : {}),
             updatedAt: new Date(),
@@ -429,7 +453,7 @@ export default function PurchasesPage() {
             partNumber: partNumber.trim(),
             name: itemName.trim(),
             category: category || "General",
-            brand: brand || "Generic",
+            brand: finalBrand,
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
             stockQty: Number(qty),
@@ -441,14 +465,22 @@ export default function PurchasesPage() {
 
         alert("Purchase saved successfully and stock updated!");
         
-        // **නව ඉල්ලීම:** අලුතින් Purchase එකක් කළ විට input කර තිබූ දත්ත මකී යෑම වළක්වා ඇත (සමහර දත්ත එලෙසම තබා ගැනීමට අවශ්‍ය නම් මෙහි resetForm ඉවත් කර ඇත). 
-        // ඔබට අවශ්‍ය නම් මෙහිදී supplierName හෝ අනෙකුත් දත්ත එලෙසම තබාගත හැක. සම්පූර්ණයෙන්ම clear වීම අවශ්‍ය නැත.
+        // Purchase එකක් කළ පසු නැවත සෙලර් (Supplier) වෙත අවධානය යොමු කර select කිරීම (අවශ්‍ය නම් Enter මඟින් නැවත තෝරාගත හැක)
         setEditingId(null);
         setOldQty(0);
-        // අවශ්‍ය නම් තවදුරටත් අලුත් අයිතම එකතු කිරීමට පහසුවීම සඳහා Qty, Part Number සහ Item Name පමණක් හිස් කර, අනෙක්වා එලෙසම තැබිය හැක:
         setPartNumber("");
         setItemName("");
         setQty("");
+        setCostPrice("");
+        setSellingPrice("");
+        setImageFile(null);
+        setCurrentImageUrl("");
+        
+        // Focus back to supplier select box and select it
+        if (supplierSelectRef.current) {
+          supplierSelectRef.current.focus();
+          supplierSelectRef.current.select();
+        }
       }
 
     } catch (error) {
@@ -495,7 +527,10 @@ export default function PurchasesPage() {
   }, [purchases, searchQuery, filterCategory, filterBrand, sortBy]);
 
   return (
-    <div className={`${darkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-800"} min-h-screen transition-colors duration-300`}>
+    <div 
+      onClick={handleScreenClick}
+      className={`${darkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-800"} min-h-screen transition-colors duration-300`}
+    >
       <div className="p-6 max-w-[1400px] mx-auto font-sans space-y-6">
         
         {/* Header with Dark Mode Toggle */}
@@ -545,8 +580,10 @@ export default function PurchasesPage() {
                 <Store className="w-3.5 h-3.5 text-blue-500" /> Select Supplier
               </label>
               <select
+                ref={supplierSelectRef}
                 value={selectedSupplier}
                 onChange={(e) => setSelectedSupplier(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                 required
               >
@@ -567,6 +604,7 @@ export default function PurchasesPage() {
                 type="date"
                 value={purchaseDate}
                 onChange={(e) => setPurchaseDate(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 transition"
               />
             </div>
@@ -610,6 +648,7 @@ export default function PurchasesPage() {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                 >
                   <option value="">-- Select Category --</option>
@@ -660,15 +699,16 @@ export default function PurchasesPage() {
 
             <div>
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
-                <Tag className="w-3.5 h-3.5 text-purple-500" /> Brand
+                <Tag className="w-3.5 h-3.5 text-purple-500" /> Brand (If blank, saved as No Brand)
               </label>
               <div className="flex gap-2">
                 <select
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                 >
-                  <option value="">-- Select Brand --</option>
+                  <option value="">-- No Brand / Select Brand --</option>
                   {brands.map((b) => (
                     <option key={b.id} value={b.name}>
                       {b.name}
@@ -857,6 +897,7 @@ export default function PurchasesPage() {
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
                 >
                   <option value="all">All Categories</option>
@@ -870,6 +911,7 @@ export default function PurchasesPage() {
                 <select
                   value={filterBrand}
                   onChange={(e) => setFilterBrand(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
                 >
                   <option value="all">All Brands</option>
@@ -885,6 +927,7 @@ export default function PurchasesPage() {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     className="p-2 pl-7 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
                   >
                     <option value="latest">Sort: Latest (Default)</option>
@@ -979,7 +1022,7 @@ export default function PurchasesPage() {
                               {p.category || "General"}
                             </span>
                             <span className="bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-md text-[10px] font-semibold border border-purple-200 dark:border-purple-900 block w-fit">
-                              {p.brand || "Generic"}
+                              {p.brand || "No Brand"}
                             </span>
                           </td>
                           <td className="p-3 text-center font-extrabold text-slate-800 dark:text-slate-200">{p.qty}</td>
@@ -991,14 +1034,14 @@ export default function PurchasesPage() {
                           </td>
                           <td className="p-3 text-center space-x-3 whitespace-nowrap">
                             <button
-                              onClick={() => handleEditClick(p), (e: any) => e.target.select?.()}
+                              onClick={() => handleEditClick(p)}
                               className="text-amber-600 dark:text-amber-400 hover:underline font-bold inline-flex items-center gap-1 transition"
                             >
                               <Edit3 className="w-3.5 h-3.5" /> Edit
                             </button>
                             <button
                               onClick={() => handleDelete(p)}
-                              className="text-rose-600 dark:text-rose-400 hover:underline font-bold inline-flex items-center gap-1 transition"
+                              className="text-rose-600 dark:text-rose-400 hover:input hover:underline font-bold inline-flex items-center gap-1 transition"
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Delete
                             </button>
