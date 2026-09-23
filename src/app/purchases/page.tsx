@@ -717,14 +717,10 @@ export default function PurchasesPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      const formElements = e.currentTarget.form?.elements;
-                      if (formElements) {
-                        for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
-                            break;
-                          }
-                        }
+                      // Selling price එකෙන් Enter ඔබද්දී කෙලින්ම ෆෝම් එක Submit වීමට සලස්වයි
+                      const form = e.currentTarget.form;
+                      if (form) {
+                        form.requestSubmit();
                       }
                     }
                   }}
