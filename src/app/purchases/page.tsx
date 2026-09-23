@@ -132,7 +132,6 @@ export default function PurchasesPage() {
 
   // Handle global screen click/touch to restore focus to the last active input
   const handleScreenClick = (e: React.MouseEvent) => {
-    // If clicking outside interactive form elements/buttons, restore focus to last typed input
     const target = e.target as HTMLElement;
     if (!target.closest("button") && !target.closest("select") && !target.closest("table") && lastFocusedInputRef.current) {
       lastFocusedInputRef.current.focus();
@@ -353,7 +352,7 @@ export default function PurchasesPage() {
     }
   };
 
-  // Handle Submit Purchase & Update Inventory Stock
+  // Handle Submit Purchase & Update Inventory Stock (Fixed Editing & Auto-fill flow)
   const handleSubmitPurchase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -465,7 +464,7 @@ export default function PurchasesPage() {
 
         alert("Purchase saved successfully and stock updated!");
         
-        // Purchase එකක් කළ පසු නැවත සෙලර් (Supplier) වෙත අවධානය යොමු කර select කිරීම (අවශ්‍ය නම් Enter මඟින් නැවත තෝරාගත හැක)
+        // Clear transaction form fields but keep flow ready for next entry
         setEditingId(null);
         setOldQty(0);
         setPartNumber("");
@@ -476,7 +475,7 @@ export default function PurchasesPage() {
         setImageFile(null);
         setCurrentImageUrl("");
         
-        // Focus back to supplier select box and select it
+        // Focus back to supplier select box and select it for keyboard/flow continuation
         if (supplierSelectRef.current) {
           supplierSelectRef.current.focus();
           supplierSelectRef.current.select();
@@ -491,7 +490,7 @@ export default function PurchasesPage() {
     }
   };
 
-  // Filter & Sort Logic for Purchases Table
+  // Filter & Sort Logic for Purchases Table (With Latest Descending order default)
   const filteredAndSortedPurchases = useMemo(() => {
     return purchases
       .filter((p) => {
@@ -522,6 +521,7 @@ export default function PurchasesPage() {
           return new Date(dateVal).getTime();
         };
 
+        // Latest first descending order based on creation time
         return getTime(b.createdAt) - getTime(a.createdAt);
       });
   }, [purchases, searchQuery, filterCategory, filterBrand, sortBy]);
@@ -584,7 +584,22 @@ export default function PurchasesPage() {
                 value={selectedSupplier}
                 onChange={(e) => setSelectedSupplier(e.target.value)}
                 onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
                 className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                autoComplete="off"
                 required
               >
                 <option value="">-- Choose Supplier --</option>
@@ -605,7 +620,22 @@ export default function PurchasesPage() {
                 value={purchaseDate}
                 onChange={(e) => setPurchaseDate(e.target.value)}
                 onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
                 className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 transition"
+                autoComplete="off"
               />
             </div>
 
@@ -620,7 +650,22 @@ export default function PurchasesPage() {
                   value={partNumber}
                   onChange={(e) => setPartNumber(e.target.value)}
                   onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -634,7 +679,22 @@ export default function PurchasesPage() {
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
                   onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -649,7 +709,22 @@ export default function PurchasesPage() {
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  autoComplete="off"
                 >
                   <option value="">-- Select Category --</option>
                   {categories.map((c) => (
@@ -685,6 +760,7 @@ export default function PurchasesPage() {
                     onFocus={(e) => e.target.select()}
                     placeholder="New Category"
                     className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
+                    autoComplete="off"
                   />
                   <button
                     type="button"
@@ -706,7 +782,22 @@ export default function PurchasesPage() {
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
                   onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  autoComplete="off"
                 >
                   <option value="">-- No Brand / Select Brand --</option>
                   {brands.map((b) => (
@@ -742,6 +833,7 @@ export default function PurchasesPage() {
                     onFocus={(e) => e.target.select()}
                     placeholder="New Brand"
                     className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
+                    autoComplete="off"
                   />
                   <button
                     type="button"
@@ -766,7 +858,22 @@ export default function PurchasesPage() {
                   setQty(e.target.value === "" ? "" : Number(e.target.value))
                 }
                 onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
                 className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                autoComplete="off"
                 required
               />
             </div>
@@ -786,7 +893,22 @@ export default function PurchasesPage() {
                     )
                   }
                   onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -804,7 +926,22 @@ export default function PurchasesPage() {
                     )
                   }
                   onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -891,6 +1028,7 @@ export default function PurchasesPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={(e) => e.target.select()}
                     className="p-2 pl-8 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 w-full transition"
+                    autoComplete="off"
                   />
                 </div>
 
@@ -1041,7 +1179,7 @@ export default function PurchasesPage() {
                             </button>
                             <button
                               onClick={() => handleDelete(p)}
-                              className="text-rose-600 dark:text-rose-400 hover:input hover:underline font-bold inline-flex items-center gap-1 transition"
+                              className="text-rose-600 dark:text-rose-400 hover:underline font-bold inline-flex items-center gap-1 transition"
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Delete
                             </button>
