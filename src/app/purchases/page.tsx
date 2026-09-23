@@ -70,7 +70,6 @@ export default function PurchasesPage() {
   const [categories, setCategories] = useState<ItemOption[]>([]);
   const [brands, setBrands] = useState<ItemOption[]>([]);
 
-  // Dark Mode State
   const [darkMode, setDarkMode] = useState(false);
 
   // Form States
@@ -105,11 +104,9 @@ export default function PurchasesPage() {
   const [filterBrand, setFilterBrand] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
 
-  // References for Keyboard Navigation & Focus Management
   const supplierSelectRef = useRef<HTMLSelectElement | null>(null);
   const lastFocusedInputRef = useRef<HTMLElement | null>(null);
 
-  // Date state (Default today)
   const getTodayDateStr = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -119,7 +116,6 @@ export default function PurchasesPage() {
   };
   const [purchaseDate, setPurchaseDate] = useState<string>(getTodayDateStr());
 
-  // Track last focused input element globally for screen touch/click refocusing
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
       if (e.target instanceof HTMLElement) {
@@ -130,7 +126,6 @@ export default function PurchasesPage() {
     return () => window.removeEventListener("focusin", handleFocusIn);
   }, []);
 
-  // Handle global screen click/touch to restore focus to the last active input
   const handleScreenClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (!target.closest("button") && !target.closest("select") && !target.closest("table") && lastFocusedInputRef.current) {
@@ -138,7 +133,6 @@ export default function PurchasesPage() {
     }
   };
 
-  // 1. Fetch Purchases
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "purchases"), (snapshot) => {
       const list: PurchaseItem[] = snapshot.docs.map((d) => ({
@@ -150,7 +144,6 @@ export default function PurchasesPage() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Suppliers, Categories, Brands
   useEffect(() => {
     const unsubSuppliers = onSnapshot(collection(db, "suppliers"), (snapshot) => {
       setSuppliers(snapshot.docs.map((d) => ({ id: d.id, name: d.data().name })));
@@ -171,7 +164,6 @@ export default function PurchasesPage() {
     };
   }, []);
 
-  // Image Compress Function
   const convertAndCompressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -195,7 +187,6 @@ export default function PurchasesPage() {
     });
   };
 
-  // Quick Add Category
   const handleAddCategory = async () => {
     if (!newCatName.trim()) return;
     try {
@@ -211,7 +202,6 @@ export default function PurchasesPage() {
     }
   };
 
-  // Delete Category
   const handleDeleteCategory = async () => {
     if (!category) return;
     if (confirm(`Are you sure you want to delete the category "${category}"?`)) {
@@ -229,7 +219,6 @@ export default function PurchasesPage() {
     }
   };
 
-  // Quick Add Brand
   const handleAddBrand = async () => {
     if (!newBrandName.trim()) return;
     try {
@@ -245,7 +234,6 @@ export default function PurchasesPage() {
     }
   };
 
-  // Delete Brand
   const handleDeleteBrand = async () => {
     if (!brand) return;
     if (confirm(`Are you sure you want to delete the brand "${brand}"?`)) {
@@ -263,7 +251,6 @@ export default function PurchasesPage() {
     }
   };
 
-  // Reset Form
   const resetForm = () => {
     setEditingId(null);
     setOldQty(0);
@@ -283,7 +270,6 @@ export default function PurchasesPage() {
     setPurchaseDate(getTodayDateStr());
   };
 
-  // Edit Click Handler
   const handleEditClick = (p: PurchaseItem) => {
     setEditingId(p.id || null);
     setOldQty(p.qty || 0);
@@ -313,10 +299,8 @@ export default function PurchasesPage() {
     }
   };
 
-  // Safeguarded Delete Click Handler
   const handleDelete = async (p: PurchaseItem) => {
     if (!p.id) return;
-
     const confirmMsg = p.itemName 
       ? `Are you sure you want to delete the purchase record for "${p.itemName}"?` 
       : "Are you sure you want to delete this purchase record?";
@@ -352,7 +336,6 @@ export default function PurchasesPage() {
     }
   };
 
-  // Handle Submit Purchase & Update Inventory Stock
   const handleSubmitPurchase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -464,7 +447,6 @@ export default function PurchasesPage() {
 
         alert("Purchase saved successfully and stock updated!");
         
-        // Clear transaction form fields but keep supplier, category, brand, and date for quick entry
         setEditingId(null);
         setOldQty(0);
         setPartNumber("");
@@ -475,7 +457,6 @@ export default function PurchasesPage() {
         setImageFile(null);
         setCurrentImageUrl("");
         
-        // Focus back to supplier select box safely
         if (supplierSelectRef.current) {
           supplierSelectRef.current.focus();
         }
@@ -489,7 +470,6 @@ export default function PurchasesPage() {
     }
   };
 
-  // Filter & Sort Logic for Purchases Table
   const filteredAndSortedPurchases = useMemo(() => {
     return purchases
       .filter((p) => {
@@ -531,7 +511,6 @@ export default function PurchasesPage() {
     >
       <div className="p-6 max-w-[1400px] mx-auto font-sans space-y-6">
         
-        {/* Header with Dark Mode Toggle */}
         <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div>
             <h1 className="text-2xl font-extrabold flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
@@ -544,7 +523,6 @@ export default function PurchasesPage() {
           <button
             onClick={() => setDarkMode(!darkMode)}
             className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-2 text-xs font-semibold shadow-sm"
-            aria-label="Toggle Dark Mode"
           >
             {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
             {darkMode ? "Light Mode" : "Dark Mode"}
@@ -552,7 +530,6 @@ export default function PurchasesPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left: Purchase Form */}
           <form
             onSubmit={handleSubmitPurchase}
             className="lg:col-span-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5 h-fit"
@@ -596,7 +573,6 @@ export default function PurchasesPage() {
                   }
                 }}
                 className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                autoComplete="off"
                 required
               >
                 <option value="">-- Choose Supplier --</option>
@@ -616,7 +592,6 @@ export default function PurchasesPage() {
                 type="date"
                 value={purchaseDate}
                 onChange={(e) => setPurchaseDate(e.target.value)}
-                onFocus={(e) => e.target.select()}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -632,7 +607,6 @@ export default function PurchasesPage() {
                   }
                 }}
                 className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 transition"
-                autoComplete="off"
               />
             </div>
 
@@ -646,7 +620,6 @@ export default function PurchasesPage() {
                   placeholder="e.g. H4-BULB"
                   value={partNumber}
                   onChange={(e) => setPartNumber(e.target.value)}
-                  onFocus={(e) => e.target.select()}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -662,7 +635,6 @@ export default function PurchasesPage() {
                     }
                   }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  autoComplete="off"
                   required
                 />
               </div>
@@ -675,7 +647,6 @@ export default function PurchasesPage() {
                   placeholder="e.g. LED Headlight"
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
-                  onFocus={(e) => e.target.select()}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -691,7 +662,6 @@ export default function PurchasesPage() {
                     }
                   }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  autoComplete="off"
                   required
                 />
               </div>
@@ -711,8 +681,9 @@ export default function PurchasesPage() {
                       const formElements = e.currentTarget.form?.elements;
                       if (formElements) {
                         for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
+                          // Jump past the New/Remove buttons directly to the next input field
+                          if (formElements[i] === e.currentTarget && formElements[i + 3]) {
+                            (formElements[i + 3] as HTMLElement).focus();
                             break;
                           }
                         }
@@ -720,7 +691,6 @@ export default function PurchasesPage() {
                     }
                   }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  autoComplete="off"
                 >
                   <option value="">-- Select Category --</option>
                   {categories.map((c) => (
@@ -743,7 +713,6 @@ export default function PurchasesPage() {
                     tabIndex={-1}
                     onClick={handleDeleteCategory}
                     className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
-                    title="Delete selected category"
                   >
                     <Trash2 className="w-3 h-3" /> Remove
                   </button>
@@ -755,7 +724,6 @@ export default function PurchasesPage() {
                     type="text"
                     value={newCatName}
                     onChange={(e) => setNewCatName(e.target.value)}
-                    onFocus={(e) => e.target.select()}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -764,7 +732,6 @@ export default function PurchasesPage() {
                     }}
                     placeholder="New Category"
                     className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
-                    autoComplete="off"
                   />
                   <button
                     type="button"
@@ -792,8 +759,9 @@ export default function PurchasesPage() {
                       const formElements = e.currentTarget.form?.elements;
                       if (formElements) {
                         for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
+                          // Jump past the New/Remove buttons directly to the next input field
+                          if (formElements[i] === e.currentTarget && formElements[i + 3]) {
+                            (formElements[i + 3] as HTMLElement).focus();
                             break;
                           }
                         }
@@ -801,7 +769,6 @@ export default function PurchasesPage() {
                     }
                   }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  autoComplete="off"
                 >
                   <option value="">-- No Brand / Select Brand --</option>
                   {brands.map((b) => (
@@ -824,7 +791,6 @@ export default function PurchasesPage() {
                     tabIndex={-1}
                     onClick={handleDeleteBrand}
                     className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
-                    title="Delete selected brand"
                   >
                     <Trash2 className="w-3 h-3" /> Remove
                   </button>
@@ -836,7 +802,6 @@ export default function PurchasesPage() {
                     type="text"
                     value={newBrandName}
                     onChange={(e) => setNewBrandName(e.target.value)}
-                    onFocus={(e) => e.target.select()}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -845,7 +810,6 @@ export default function PurchasesPage() {
                     }}
                     placeholder="New Brand"
                     className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
-                    autoComplete="off"
                   />
                   <button
                     type="button"
@@ -867,10 +831,7 @@ export default function PurchasesPage() {
                 type="number"
                 placeholder="0"
                 value={qty}
-                onChange={(e) =>
-                  setQty(e.target.value === "" ? "" : Number(e.target.value))
-                }
-                onFocus={(e) => e.target.select()}
+                onChange={(e) => setQty(e.target.value === "" ? "" : Number(e.target.value))}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -886,7 +847,6 @@ export default function PurchasesPage() {
                   }
                 }}
                 className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                autoComplete="off"
                 required
               />
             </div>
@@ -900,12 +860,7 @@ export default function PurchasesPage() {
                   type="number"
                   placeholder="0"
                   value={costPrice}
-                  onChange={(e) =>
-                    setCostPrice(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setCostPrice(e.target.value === "" ? "" : Number(e.target.value))}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -921,7 +876,6 @@ export default function PurchasesPage() {
                     }
                   }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  autoComplete="off"
                   required
                 />
               </div>
@@ -933,20 +887,16 @@ export default function PurchasesPage() {
                   type="number"
                   placeholder="0"
                   value={sellingPrice}
-                  onChange={(e) =>
-                    setSellingPrice(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setSellingPrice(e.target.value === "" ? "" : Number(e.target.value))}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
                       const formElements = e.currentTarget.form?.elements;
                       if (formElements) {
                         for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
+                          // Jump past the favorite checkbox so Enter on selling price goes directly to submit button
+                          if (formElements[i] === e.currentTarget && formElements[i + 2]) {
+                            (formElements[i + 2] as HTMLElement).focus();
                             break;
                           }
                         }
@@ -954,13 +904,12 @@ export default function PurchasesPage() {
                     }
                   }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  autoComplete="off"
                   required
                 />
               </div>
             </div>
 
-            {/* Favorite Checkbox in Form - tabIndex={-1} added */}
+            {/* Favorite Checkbox - tabIndex={-1} added to prevent Enter from targeting it during form filling */}
             <div className="flex items-center gap-2 pt-1 pb-1">
               <input
                 type="checkbox"
@@ -977,8 +926,7 @@ export default function PurchasesPage() {
 
             <div>
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1 flex items-center gap-1.5">
-                <ImageIcon className="w-3.5 h-3.5 text-blue-500" /> Product Photo{" "}
-                {editingId ? "(Optional: For change only)" : "(Optional)"}
+                <ImageIcon className="w-3.5 h-3.5 text-blue-500" /> Product Photo {editingId ? "(Optional)" : "(Optional)"}
               </label>
               <input
                 type="file"
@@ -1024,14 +972,12 @@ export default function PurchasesPage() {
             </button>
           </form>
 
-          {/* Right: Purchase History Table */}
           <div className="lg:col-span-8 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
               <h2 className="font-bold text-base text-slate-800 dark:text-slate-200 flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-500" /> Purchase History ({filteredAndSortedPurchases.length})
               </h2>
 
-              {/* Search, Filter & Sort Controls */}
               <div className="flex flex-wrap gap-2 w-full md:w-auto">
                 <div className="relative w-full sm:w-48">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
@@ -1040,9 +986,7 @@ export default function PurchasesPage() {
                     placeholder="Search name, part #..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={(e) => e.target.select()}
                     className="p-2 pl-8 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 w-full transition"
-                    autoComplete="off"
                   />
                 </div>
 
@@ -1154,7 +1098,6 @@ export default function PurchasesPage() {
                                   }
                                 }}
                                 className="text-base hover:scale-110 transition cursor-pointer focus:outline-none"
-                                title="Click to toggle favorite"
                               >
                                 {p.isFavorite ? "⭐" : "☆"}
                               </button>
