@@ -769,6 +769,20 @@ export default function PurchasesPage() {
                 type="file"
                 accept="image/*"
                 onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
                 className="w-full text-xs text-slate-600 dark:text-slate-300 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-600 dark:file:text-blue-400 file:cursor-pointer file:font-semibold"
               />
               
