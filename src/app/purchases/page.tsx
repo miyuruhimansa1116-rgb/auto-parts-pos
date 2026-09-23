@@ -448,12 +448,12 @@ export default function PurchasesPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    <form
+          <form
             onSubmit={handleSubmitPurchase}
-            className="lg:col-span-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xl shadow-slate-200/40 dark:shadow-slate-950/50 space-y-4 h-fit transition-all"
+            className="lg:col-span-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5 h-fit"
           >
-            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/80 pb-3.5">
-              <h2 className="font-bold text-base text-slate-800 dark:text-slate-100 flex items-center gap-2.5">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="font-bold text-base text-slate-800 dark:text-slate-200 flex items-center gap-2">
                 {editingId ? <Edit3 className="w-4 h-4 text-amber-500" /> : <Sparkles className="w-4 h-4 text-blue-500" />}
                 {editingId ? "Edit Purchase" : "Record New Purchase"}
               </h2>
@@ -461,49 +461,76 @@ export default function PurchasesPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 font-bold flex items-center gap-1 transition shadow-sm"
+                  className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 font-bold flex items-center gap-1 transition"
                 >
-                  <X className="w-3.5 h-3.5" /> Cancel
+                  <X className="w-3 h-3" /> Cancel
                 </button>
               )}
             </div>
 
-            {/* Select Supplier */}
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5 mb-1.5">
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
                 <Store className="w-3.5 h-3.5 text-blue-500" /> Select Supplier
               </label>
               <select
                 ref={supplierSelectRef}
                 value={selectedSupplier}
                 onChange={(e) => setSelectedSupplier(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                 required
               >
                 <option value="">-- Choose Supplier --</option>
                 {suppliers.map((s) => (
-                  <option key={s.id} value={s.name}>{s.name}</option>
+                  <option key={s.id} value={s.name}>
+                    {s.name}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Purchase Date */}
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5 mb-1.5">
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
                 <CalendarDays className="w-3.5 h-3.5 text-blue-500" /> Purchase Date
               </label>
               <input
                 type="date"
                 value={purchaseDate}
                 onChange={(e) => setPurchaseDate(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold bg-slate-50/50 dark:bg-slate-800/40 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 transition"
               />
             </div>
 
-            {/* Part Number & Item Name */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1 mb-1.5">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
                   <Hash className="w-3.5 h-3.5 text-blue-500" /> Part Number
                 </label>
                 <input
@@ -511,12 +538,26 @@ export default function PurchasesPage() {
                   placeholder="e.g. H4-BULB"
                   value={partNumber}
                   onChange={(e) => setPartNumber(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                   required
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1 mb-1.5">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
                   <Tag className="w-3.5 h-3.5 text-blue-500" /> Item Name
                 </label>
                 <input
@@ -524,49 +565,92 @@ export default function PurchasesPage() {
                   placeholder="e.g. LED Headlight"
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                   required
                 />
               </div>
             </div>
 
-            {/* Category */}
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5 mb-1.5">
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
                 <Layers className="w-3.5 h-3.5 text-blue-500" /> Category
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
               >
                 <option value="">-- Select Category --</option>
                 {categories.map((c) => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Brand */}
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5 mb-1.5">
-                <Tag className="w-3.5 h-3.5 text-purple-500" /> Brand <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                <Tag className="w-3.5 h-3.5 text-purple-500" /> Brand (If blank, saved as No Brand)
               </label>
               <select
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
               >
                 <option value="">-- No Brand / Select Brand --</option>
                 {brands.map((b) => (
-                  <option key={b.id} value={b.name}>{b.name}</option>
+                  <option key={b.id} value={b.name}>
+                    {b.name}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Quantity */}
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5 mb-1.5">
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
                 <Package className="w-3.5 h-3.5 text-blue-500" /> Quantity
               </label>
               <input
@@ -574,15 +658,28 @@ export default function PurchasesPage() {
                 placeholder="0"
                 value={qty}
                 onChange={(e) => setQty(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                 required
               />
             </div>
 
-            {/* Prices Grid */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1 mb-1.5">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
                   <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Cost Price (Rs.)
                 </label>
                 <input
@@ -590,12 +687,26 @@ export default function PurchasesPage() {
                   placeholder="0"
                   value={costPrice}
                   onChange={(e) => setCostPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                   required
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1 mb-1.5">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
                   <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Selling Price (Rs.)
                 </label>
                 <input
@@ -603,19 +714,38 @@ export default function PurchasesPage() {
                   placeholder="0"
                   value={sellingPrice}
                   onChange={(e) => setSellingPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-800/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.currentTarget.form?.requestSubmit();
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                   required
                 />
               </div>
             </div>
 
-            {/* Favorite Checkbox */}
-            <div className="flex items-center gap-2.5 py-1">
+            <div className="flex items-center gap-2 pt-1 pb-1">
               <input
                 type="checkbox"
                 id="isFavorite"
                 checked={isFavorite}
                 onChange={(e) => setIsFavorite(e.target.checked)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
                 className="w-4 h-4 text-amber-600 rounded border-slate-300 dark:border-slate-700 focus:ring-amber-500 cursor-pointer"
               />
               <label htmlFor="isFavorite" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
@@ -623,20 +753,33 @@ export default function PurchasesPage() {
               </label>
             </div>
 
-            {/* Product Photo Upload */}
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1.5 flex items-center gap-1.5">
-                <ImageIcon className="w-3.5 h-3.5 text-blue-500" /> Product Photo <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1 flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-blue-500" /> Product Photo {editingId ? "(Optional)" : "(Optional)"}
               </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                className="w-full text-xs text-slate-500 dark:text-slate-400 focus:outline-none file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-600 dark:file:text-blue-400 file:cursor-pointer file:font-semibold hover:file:bg-blue-100 transition"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full text-xs text-slate-600 dark:text-slate-300 focus:outline-none file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-600 dark:file:text-blue-400 file:cursor-pointer file:font-semibold"
               />
               
               {(imageFile || currentImageUrl) && (
-                <div className="mt-2.5 flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl">
+                <div className="mt-2.5 flex items-center gap-2.5 p-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl">
                   <img
                     src={imageFile ? URL.createObjectURL(imageFile) : currentImageUrl}
                     alt="Product Preview"
@@ -649,14 +792,13 @@ export default function PurchasesPage() {
               )}
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={uploading}
-              className={`w-full text-white font-bold py-3.5 rounded-xl transition-all shadow-lg text-xs mt-2 disabled:bg-slate-400 flex items-center justify-center gap-2 cursor-pointer ${
+              className={`w-full text-white font-bold py-3 rounded-xl transition shadow-md text-xs mt-3 disabled:bg-slate-400 flex items-center justify-center gap-2 ${
                 editingId
-                  ? "bg-amber-600 hover:bg-amber-700 shadow-amber-600/20"
-                  : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
+                  ? "bg-amber-600 hover:bg-amber-700"
+                  : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
               {uploading ? (
