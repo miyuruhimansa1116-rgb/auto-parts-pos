@@ -29,7 +29,6 @@ import {
   Sun,
   Moon,
   X,
-  Check,
   DollarSign,
   Hash,
   Layers,
@@ -76,13 +75,8 @@ export default function PurchasesPage() {
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [partNumber, setPartNumber] = useState("");
   const [itemName, setItemName] = useState("");
-
   const [category, setCategory] = useState("");
-  const [showNewCatInput, setShowNewCatInput] = useState(false);
-  const [newCatName, setNewCatName] = useState("");
-
   const [brand, setBrand] = useState("");
-
   const [qty, setQty] = useState<number | "">("");
   const [costPrice, setCostPrice] = useState<number | "">("");
   const [sellingPrice, setSellingPrice] = useState<number | "">("");
@@ -185,38 +179,6 @@ export default function PurchasesPage() {
     });
   };
 
-  const handleAddCategory = async () => {
-    if (!newCatName.trim()) return;
-    try {
-      await addDoc(collection(db, "categories"), {
-        name: newCatName.trim(),
-        createdAt: new Date(),
-      });
-      setCategory(newCatName.trim());
-      setNewCatName("");
-      setShowNewCatInput(false);
-    } catch (err) {
-      console.error("Add Category Error:", err);
-    }
-  };
-
-  const handleDeleteCategory = async () => {
-    if (!category) return;
-    if (confirm(`Are you sure you want to delete the category "${category}"?`)) {
-      try {
-        const catObj = categories.find((c) => c.name === category);
-        if (catObj && catObj.id) {
-          await deleteDoc(doc(db, "categories", catObj.id));
-          setCategory("");
-          alert("Category deleted successfully!");
-        }
-      } catch (err) {
-        console.error("Delete Category Error:", err);
-        alert("Error deleting category.");
-      }
-    }
-  };
-
   const resetForm = () => {
     setEditingId(null);
     setOldQty(0);
@@ -231,7 +193,6 @@ export default function PurchasesPage() {
     setIsFavorite(false);
     setImageFile(null);
     setCurrentImageUrl("");
-    setShowNewCatInput(false);
     setPurchaseDate(getTodayDateStr());
   };
 
@@ -412,15 +373,7 @@ export default function PurchasesPage() {
 
         alert("Purchase saved successfully and stock updated!");
         
-        setEditingId(null);
-        setOldQty(0);
-        setPartNumber("");
-        setItemName("");
-        setQty("");
-        setCostPrice("");
-        setSellingPrice("");
-        setImageFile(null);
-        setCurrentImageUrl("");
+        resetForm();
         
         if (supplierSelectRef.current) {
           supplierSelectRef.current.focus();
@@ -636,74 +589,32 @@ export default function PurchasesPage() {
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
                 <Layers className="w-3.5 h-3.5 text-blue-500" /> Category
               </label>
-              <div className="flex gap-2">
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const formElements = e.currentTarget.form?.elements;
-                      if (formElements) {
-                        for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 3]) {
-                            (formElements[i + 3] as HTMLElement).focus();
-                            break;
-                          }
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
                         }
                       }
                     }
-                  }}
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                >
-                  <option value="">-- Select Category --</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowNewCatInput(!showNewCatInput)}
-                  className="px-3 py-1 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900 rounded-xl text-xs font-bold hover:bg-blue-100 whitespace-nowrap flex items-center gap-1 transition"
-                >
-                  <Plus className="w-3 h-3" /> New
-                </button>
-                {category && (
-                  <button
-                    type="button"
-                    onClick={handleDeleteCategory}
-                    className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
-                  >
-                    <Trash2 className="w-3 h-3" /> Remove
-                  </button>
-                )}
-              </div>
-              {showNewCatInput && (
-                <div className="flex gap-2 mt-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <input
-                    type="text"
-                    value={newCatName}
-                    onChange={(e) => setNewCatName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddCategory();
-                      }
-                    }}
-                    placeholder="New Category"
-                    className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCategory}
-                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition"
-                  >
-                    <Check className="w-3 h-3" /> Save
-                  </button>
-                </div>
-              )}
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+              >
+                <option value="">-- Select Category --</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -1077,4 +988,3 @@ export default function PurchasesPage() {
     </div>
   );
 }
-
