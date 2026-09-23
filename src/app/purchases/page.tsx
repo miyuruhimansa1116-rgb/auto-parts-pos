@@ -36,9 +36,12 @@ import {
   Store,
   SlidersHorizontal,
   Sparkles,
+<<<<<<< HEAD
   Eye,
   EyeOff,
   AlertCircle,
+=======
+>>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
 } from "lucide-react";
 
 interface ItemOption {
@@ -423,6 +426,10 @@ export default function PurchasesPage() {
         }
 
         alert("Purchase saved successfully and stock updated!");
+<<<<<<< HEAD
+=======
+        
+>>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
         resetForm();
         
         if (supplierSelectRef.current) {
@@ -479,7 +486,11 @@ export default function PurchasesPage() {
     >
       <div className="p-6 max-w-[1400px] mx-auto font-sans space-y-6">
         
+<<<<<<< HEAD
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+=======
+        <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+>>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
           <div>
             <h1 className="text-2xl font-extrabold flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
               <Truck className="w-7 h-7 text-blue-600 dark:text-blue-400" /> Supplier Purchases & Restocks
@@ -488,6 +499,7 @@ export default function PurchasesPage() {
               Record stock purchases from suppliers and automatically update inventory.
             </p>
           </div>
+<<<<<<< HEAD
           <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
             <button
               onClick={() => {
@@ -573,8 +585,101 @@ export default function PurchasesPage() {
                     ✕
                   </button>
                 </div>
+=======
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-2 text-xs font-semibold shadow-sm"
+          >
+            {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+            {darkMode ? "Light Mode" : "Dark Mode"}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <form
+            onSubmit={handleSubmitPurchase}
+            className="lg:col-span-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5 h-fit"
+          >
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="font-bold text-base text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                {editingId ? <Edit3 className="w-4 h-4 text-amber-500" /> : <Sparkles className="w-4 h-4 text-blue-500" />}
+                {editingId ? "Edit Purchase" : "Record New Purchase"}
+              </h2>
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 font-bold flex items-center gap-1 transition"
+                >
+                  <X className="w-3 h-3" /> Cancel
+                </button>
+>>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
               )}
 
+<<<<<<< HEAD
+=======
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                <Store className="w-3.5 h-3.5 text-blue-500" /> Select Supplier
+              </label>
+              <select
+                ref={supplierSelectRef}
+                value={selectedSupplier}
+                onChange={(e) => setSelectedSupplier(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                required
+              >
+                <option value="">-- Choose Supplier --</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.name}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                <CalendarDays className="w-3.5 h-3.5 text-blue-500" /> Purchase Date
+              </label>
+              <input
+                type="date"
+                value={purchaseDate}
+                onChange={(e) => setPurchaseDate(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 transition"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+>>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
               <div>
                 <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
                   <Store className="w-3.5 h-3.5 text-blue-500" /> Select Supplier
@@ -614,9 +719,16 @@ export default function PurchasesPage() {
                   <CalendarDays className="w-3.5 h-3.5 text-blue-500" /> Purchase Date
                 </label>
                 <input
+<<<<<<< HEAD
                   type="date"
                   value={purchaseDate}
                   onChange={(e) => setPurchaseDate(e.target.value)}
+=======
+                  type="text"
+                  placeholder="e.g. H4-BULB"
+                  value={partNumber}
+                  onChange={(e) => setPartNumber(e.target.value)}
+>>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -631,6 +743,7 @@ export default function PurchasesPage() {
                       }
                     }
                   }}
+<<<<<<< HEAD
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 transition"
                 />
               </div>
@@ -924,11 +1037,278 @@ export default function PurchasesPage() {
           )}
 
           <div className={`${showForm ? "lg:col-span-8" : "lg:col-span-12"} bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 transition-all duration-300`}>
+=======
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
+                  <Tag className="w-3.5 h-3.5 text-blue-500" /> Item Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. LED Headlight"
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                <Layers className="w-3.5 h-3.5 text-blue-500" /> Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+              >
+                <option value="">-- Select Category --</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                <Tag className="w-3.5 h-3.5 text-purple-500" /> Brand (If blank, saved as No Brand)
+              </label>
+              <select
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+              >
+                <option value="">-- No Brand / Select Brand --</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.name}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                <Package className="w-3.5 h-3.5 text-blue-500" /> Quantity
+              </label>
+              <input
+                type="number"
+                placeholder="0"
+                value={qty}
+                onChange={(e) => setQty(e.target.value === "" ? "" : Number(e.target.value))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Cost Price (Rs.)
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={costPrice}
+                  onChange={(e) => setCostPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Selling Price (Rs.)
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={sellingPrice}
+                  onChange={(e) => setSellingPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.currentTarget.form?.requestSubmit();
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1 pb-1">
+              <input
+                type="checkbox"
+                id="isFavorite"
+                checked={isFavorite}
+                onChange={(e) => setIsFavorite(e.target.checked)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-4 h-4 text-amber-600 rounded border-slate-300 dark:border-slate-700 focus:ring-amber-500 cursor-pointer"
+              />
+              <label htmlFor="isFavorite" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                ⭐ Mark as Favorite Item
+              </label>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1 flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-blue-500" /> Product Photo {editingId ? "(Optional)" : "(Optional)"}
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="w-full text-xs text-slate-600 dark:text-slate-300 focus:outline-none file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-600 dark:file:text-blue-400 file:cursor-pointer file:font-semibold"
+              />
+              
+              {(imageFile || currentImageUrl) && (
+                <div className="mt-2.5 flex items-center gap-2.5 p-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl">
+                  <img
+                    src={imageFile ? URL.createObjectURL(imageFile) : currentImageUrl}
+                    alt="Product Preview"
+                    className="w-10 h-10 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm"
+                  />
+                  <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                    {imageFile ? "New image selected" : "Current saved image"}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={uploading}
+              className={`w-full text-white font-bold py-3 rounded-xl transition shadow-md text-xs mt-3 disabled:bg-slate-400 flex items-center justify-center gap-2 ${
+                editingId
+                  ? "bg-amber-600 hover:bg-amber-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              {uploading ? (
+                "Saving..."
+              ) : editingId ? (
+                <>
+                  <Edit3 className="w-4 h-4" /> Update Purchase
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" /> Save Purchase & Update Stock
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="lg:col-span-8 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+>>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
               <h2 className="font-bold text-base text-slate-800 dark:text-slate-200 flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-500" /> Purchase History ({filteredAndSortedPurchases.length})
               </h2>
 
+<<<<<<< HEAD
               <div className="flex flex-wrap items-center justify-end gap-2 w-full md:w-auto overflow-hidden">
                 <div
                   className={`relative transition-all duration-500 ease-in-out ${
@@ -987,6 +1367,18 @@ export default function PurchasesPage() {
                       </button>
                     )}
                   </div>
+=======
+              <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                <div className="relative w-full sm:w-48">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    placeholder="Search name, part #..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="p-2 pl-8 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 w-full transition"
+                  />
+>>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
                 </div>
 
                 <div className={`flex flex-wrap gap-2 transition-all duration-500 ease-in-out items-center ${searchQuery ? "opacity-0 max-h-0 overflow-hidden sm:opacity-100 sm:max-h-20" : "opacity-100 max-h-20"}`}>
