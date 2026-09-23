@@ -717,7 +717,6 @@ export default function PurchasesPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      // Selling price එකෙන් Enter ඔබද්දී කෙලින්ම ෆෝම් එක Submit වීමට සලස්වයි
                       const form = e.currentTarget.form;
                       if (form) {
                         form.requestSubmit();
@@ -779,7 +778,7 @@ export default function PurchasesPage() {
                     }
                   }
                 }}
-                className="w-full text-xs text-slate-600 dark:text-slate-300 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-600 dark:file:text-blue-400 file:cursor-pointer file:font-semibold"
+                className="w-full text-xs text-slate-600 dark:text-slate-300 focus:outline-none file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-600 dark:file:text-blue-400 file:cursor-pointer file:font-semibold"
               />
               
               {(imageFile || currentImageUrl) && (
