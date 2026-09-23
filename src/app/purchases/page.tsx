@@ -450,6 +450,12 @@ export default function PurchasesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <form
             onSubmit={handleSubmitPurchase}
+            onKeyDown={(e) => {
+              if (e.ctrlKey && e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.requestSubmit();
+              }
+            }}
             className="lg:col-span-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5 h-fit"
           >
             <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -477,7 +483,7 @@ export default function PurchasesPage() {
                 value={selectedSupplier}
                 onChange={(e) => setSelectedSupplier(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !e.ctrlKey) {
                     e.preventDefault();
                     const formElements = e.currentTarget.form?.elements;
                     if (formElements) {
@@ -511,7 +517,7 @@ export default function PurchasesPage() {
                 value={purchaseDate}
                 onChange={(e) => setPurchaseDate(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !e.ctrlKey) {
                     e.preventDefault();
                     const formElements = e.currentTarget.form?.elements;
                     if (formElements) {
@@ -539,7 +545,7 @@ export default function PurchasesPage() {
                   value={partNumber}
                   onChange={(e) => setPartNumber(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !e.ctrlKey) {
                       e.preventDefault();
                       const formElements = e.currentTarget.form?.elements;
                       if (formElements) {
@@ -566,7 +572,7 @@ export default function PurchasesPage() {
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !e.ctrlKey) {
                       e.preventDefault();
                       const formElements = e.currentTarget.form?.elements;
                       if (formElements) {
@@ -593,7 +599,7 @@ export default function PurchasesPage() {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !e.ctrlKey) {
                     e.preventDefault();
                     const formElements = e.currentTarget.form?.elements;
                     if (formElements) {
@@ -625,7 +631,7 @@ export default function PurchasesPage() {
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !e.ctrlKey) {
                     e.preventDefault();
                     const formElements = e.currentTarget.form?.elements;
                     if (formElements) {
@@ -659,7 +665,7 @@ export default function PurchasesPage() {
                 value={qty}
                 onChange={(e) => setQty(e.target.value === "" ? "" : Number(e.target.value))}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !e.ctrlKey) {
                     e.preventDefault();
                     const formElements = e.currentTarget.form?.elements;
                     if (formElements) {
@@ -688,7 +694,7 @@ export default function PurchasesPage() {
                   value={costPrice}
                   onChange={(e) => setCostPrice(e.target.value === "" ? "" : Number(e.target.value))}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !e.ctrlKey) {
                       e.preventDefault();
                       const formElements = e.currentTarget.form?.elements;
                       if (formElements) {
@@ -715,7 +721,7 @@ export default function PurchasesPage() {
                   value={sellingPrice}
                   onChange={(e) => setSellingPrice(e.target.value === "" ? "" : Number(e.target.value))}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !e.ctrlKey) {
                       e.preventDefault();
                       const form = e.currentTarget.form;
                       if (form) {
@@ -736,7 +742,7 @@ export default function PurchasesPage() {
                 checked={isFavorite}
                 onChange={(e) => setIsFavorite(e.target.checked)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !e.ctrlKey) {
                     e.preventDefault();
                     const formElements = e.currentTarget.form?.elements;
                     if (formElements) {
@@ -765,7 +771,7 @@ export default function PurchasesPage() {
                 accept="image/*"
                 onChange={(e) => setImageFile(e.target.files?.[0] || null)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !e.ctrlKey) {
                     e.preventDefault();
                     const formElements = e.currentTarget.form?.elements;
                     if (formElements) {
