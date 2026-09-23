@@ -26,10 +26,7 @@ const navLinks = [
   { href: "/products", label: "Products & Stock", icon: Package },
   { href: "/purchases", label: "Purchases", icon: Truck },
   { href: "/suppliers", label: "Suppliers", icon: Building2 },
-<<<<<<< HEAD
   { href: "/c&b", label: "Categories & Brands", icon: Tags },
-=======
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
   { href: "/reports", label: "Sales Reports", icon: BarChart3 },
   { href: "/reports/purchases", label: "Purchase Reports", icon: FileSpreadsheet },
   { href: "/admin/users", label: "Create Users", icon: UserPlus },
@@ -155,7 +152,6 @@ export default function Sidebar() {
         </div>
       </div>
     </div>
-<<<<<<< HEAD
   );
 
   return (
@@ -185,41 +181,6 @@ export default function Sidebar() {
       </div>
 
       {/* Desktop Sidebar */}
-      <aside className="w-64 bg-white/90 dark:bg-gray-900/95 backdrop-blur-md text-gray-800 dark:text-gray-100 flex-col hidden sm:flex shadow-lg min-h-screen border-r border-gray-200/80 dark:border-gray-800 transition-colors duration-200">
-        <SidebarContent />
-      </aside>
-    </>
-=======
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
-  );
-
-  return (
-    <>
-      {/* Mobile Top Navigation Bar */}
-      <div className="sm:hidden flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
-            S
-          </div>
-          <span className="font-bold text-sm text-gray-900 dark:text-white">Sampath Auto Parts</span>
-        </div>
-        <button
-          onClick={() => setIsOpen(true)}
-          className="p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
-          aria-label="Open Menu"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      </div>
-
-      {/* Mobile Fullscreen Sliding Menu (w-full මඟින් මුළු තිරයම ආවරණය කරයි) */}
-      <div className={`fixed inset-0 z-50 bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-300 ease-in-out sm:hidden ${
-        isOpen ? "translate-x-0" : "translate-x-full"
-      }`}>
-        <SidebarContent />
-      </div>
-
-      {/* Desktop Sidebar (Laptop එකේදී පෙනෙන සාමාන්‍ය සයිඩ්බාර් එක) */}
       <aside className="w-64 bg-white/90 dark:bg-gray-900/95 backdrop-blur-md text-gray-800 dark:text-gray-100 flex-col hidden sm:flex shadow-lg min-h-screen border-r border-gray-200/80 dark:border-gray-800 transition-colors duration-200">
         <SidebarContent />
       </aside>
