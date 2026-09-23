@@ -1,13 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  typescript: {
-    // ගිණුම් ගත කිරීමේදී (Build) TypeScript errors නොසලකා හරිනු ලැබේ
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // eslint කී එක මඟින් පැමිණි දෝෂය ඉවත් කිරීම සඳහා
+  allowedDevOrigins: ["192.168.71.129"],
 };
 
 export default nextConfig;

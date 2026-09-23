@@ -1,11 +1,12 @@
 // src/app/purchases/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { db } from "@/lib/firebase";
 import {
   collection,
   addDoc,
+  setDoc,
   onSnapshot,
   doc,
   getDocs,
@@ -29,14 +30,15 @@ import {
   Sun,
   Moon,
   X,
-  Check,
   DollarSign,
   Hash,
   Layers,
   Store,
-  ArrowUpDown,
-  Sparkles,
   SlidersHorizontal,
+  Sparkles,
+  Eye,
+  EyeOff,
+  AlertCircle,
 } from "lucide-react";
 
 interface ItemOption {
@@ -71,26 +73,34 @@ export default function PurchasesPage() {
   const [categories, setCategories] = useState<ItemOption[]>([]);
   const [brands, setBrands] = useState<ItemOption[]>([]);
 
-  // Dark Mode State
   const [darkMode, setDarkMode] = useState(false);
+
+  // Form Visibility State with localStorage persistence
+  const [showForm, setShowForm] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("purchases_show_form");
+      return saved !== null ? JSON.parse(saved) : false;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("purchases_show_form", JSON.stringify(showForm));
+  }, [showForm]);
 
   // Form States
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [partNumber, setPartNumber] = useState("");
   const [itemName, setItemName] = useState("");
-
   const [category, setCategory] = useState("");
-  const [showNewCatInput, setShowNewCatInput] = useState(false);
-  const [newCatName, setNewCatName] = useState("");
-
   const [brand, setBrand] = useState("");
-  const [showNewBrandInput, setShowNewBrandInput] = useState(false);
-  const [newBrandName, setNewBrandName] = useState("");
-
   const [qty, setQty] = useState<number | "">("");
   const [costPrice, setCostPrice] = useState<number | "">("");
   const [sellingPrice, setSellingPrice] = useState<number | "">("");
   const [isFavorite, setIsFavorite] = useState(false);
+
+  // Error Message State
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>("");
@@ -106,7 +116,9 @@ export default function PurchasesPage() {
   const [filterBrand, setFilterBrand] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
 
-  // Date state (Default today)
+  const supplierSelectRef = useRef<HTMLSelectElement | null>(null);
+  const lastFocusedInputRef = useRef<HTMLElement | null>(null);
+
   const getTodayDateStr = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -116,7 +128,23 @@ export default function PurchasesPage() {
   };
   const [purchaseDate, setPurchaseDate] = useState<string>(getTodayDateStr());
 
-  // 1. Fetch Purchases
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      if (e.target instanceof HTMLElement) {
+        lastFocusedInputRef.current = e.target;
+      }
+    };
+    window.addEventListener("focusin", handleFocusIn);
+    return () => window.removeEventListener("focusin", handleFocusIn);
+  }, []);
+
+  const handleScreenClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest("button") && !target.closest("select") && !target.closest("table") && lastFocusedInputRef.current) {
+      lastFocusedInputRef.current.focus();
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "purchases"), (snapshot) => {
       const list: PurchaseItem[] = snapshot.docs.map((d) => ({
@@ -128,7 +156,6 @@ export default function PurchasesPage() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Suppliers, Categories, Brands
   useEffect(() => {
     const unsubSuppliers = onSnapshot(collection(db, "suppliers"), (snapshot) => {
       setSuppliers(snapshot.docs.map((d) => ({ id: d.id, name: d.data().name })));
@@ -149,7 +176,6 @@ export default function PurchasesPage() {
     };
   }, []);
 
-  // Image Compress Function
   const convertAndCompressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -173,75 +199,6 @@ export default function PurchasesPage() {
     });
   };
 
-  // Quick Add Category
-  const handleAddCategory = async () => {
-    if (!newCatName.trim()) return;
-    try {
-      await addDoc(collection(db, "categories"), {
-        name: newCatName.trim(),
-        createdAt: new Date(),
-      });
-      setCategory(newCatName.trim());
-      setNewCatName("");
-      setShowNewCatInput(false);
-    } catch (err) {
-      console.error("Add Category Error:", err);
-    }
-  };
-
-  // Delete Category
-  const handleDeleteCategory = async () => {
-    if (!category) return;
-    if (confirm(`Are you sure you want to delete the category "${category}"?`)) {
-      try {
-        const catObj = categories.find((c) => c.name === category);
-        if (catObj && catObj.id) {
-          await deleteDoc(doc(db, "categories", catObj.id));
-          setCategory("");
-          alert("Category deleted successfully!");
-        }
-      } catch (err) {
-        console.error("Delete Category Error:", err);
-        alert("Error deleting category.");
-      }
-    }
-  };
-
-  // Quick Add Brand
-  const handleAddBrand = async () => {
-    if (!newBrandName.trim()) return;
-    try {
-      await addDoc(collection(db, "brands"), {
-        name: newBrandName.trim(),
-        createdAt: new Date(),
-      });
-      setBrand(newBrandName.trim());
-      setNewBrandName("");
-      setShowNewBrandInput(false);
-    } catch (err) {
-      console.error("Add Brand Error:", err);
-    }
-  };
-
-  // Delete Brand
-  const handleDeleteBrand = async () => {
-    if (!brand) return;
-    if (confirm(`Are you sure you want to delete the brand "${brand}"?`)) {
-      try {
-        const brandObj = brands.find((b) => b.name === brand);
-        if (brandObj && brandObj.id) {
-          await deleteDoc(doc(db, "brands", brandObj.id));
-          setBrand("");
-          alert("Brand deleted successfully!");
-        }
-      } catch (err) {
-        console.error("Delete Brand Error:", err);
-        alert("Error deleting brand.");
-      }
-    }
-  };
-
-  // Reset Form
   const resetForm = () => {
     setEditingId(null);
     setOldQty(0);
@@ -256,13 +213,12 @@ export default function PurchasesPage() {
     setIsFavorite(false);
     setImageFile(null);
     setCurrentImageUrl("");
-    setShowNewCatInput(false);
-    setShowNewBrandInput(false);
     setPurchaseDate(getTodayDateStr());
+    setErrorMessage(null);
   };
 
-  // Edit Click Handler
   const handleEditClick = (p: PurchaseItem) => {
+    setShowForm(true); 
     setEditingId(p.id || null);
     setOldQty(p.qty || 0);
     setSelectedSupplier(p.supplierName || "");
@@ -276,6 +232,7 @@ export default function PurchasesPage() {
     setIsFavorite(p.isFavorite || false);
     setCurrentImageUrl(p.imageUrl || "");
     setImageFile(null);
+    setErrorMessage(null);
 
     if (p.createdAt) {
       const pDate =
@@ -291,10 +248,8 @@ export default function PurchasesPage() {
     }
   };
 
-  // Safeguarded Delete Click Handler
   const handleDelete = async (p: PurchaseItem) => {
     if (!p.id) return;
-
     const confirmMsg = p.itemName 
       ? `Are you sure you want to delete the purchase record for "${p.itemName}"?` 
       : "Are you sure you want to delete this purchase record?";
@@ -330,9 +285,10 @@ export default function PurchasesPage() {
     }
   };
 
-  // Handle Submit Purchase & Update Inventory Stock
   const handleSubmitPurchase = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
     if (
       !selectedSupplier ||
       !partNumber ||
@@ -341,15 +297,41 @@ export default function PurchasesPage() {
       costPrice === "" ||
       sellingPrice === ""
     ) {
-      alert("Please fill in all required information!");
+      setErrorMessage("කරුණාකර අවශ්‍ය සියලුම තොරතුරු සම්පූර්ණ කරන්න!");
       return;
     }
 
     try {
       setUploading(true);
+
+      const trimmedPartNumber = partNumber.trim().toLowerCase();
+      const trimmedItemName = itemName.trim().toLowerCase();
+
+      // Duplicate Check (යුනීක් බව තහවුරු කිරීම)
+      const existingMatch = purchases.find((p) => {
+        // සංස්කරණය කිරීමේදී (Editing) තමන්ගේම ID එක හැර වෙනත් එකක් සමඟ ගැටේදැයි බලයි
+        if (editingId && p.id === editingId) return false;
+        
+        return (
+          p.partNumber?.trim().toLowerCase() === trimmedPartNumber ||
+          p.itemName?.trim().toLowerCase() === trimmedItemName
+        );
+      });
+
+      if (existingMatch) {
+        setUploading(false);
+        setErrorMessage("This part number or item name already exists in another purchase! Please enter a different one.");
+        return;
+      }
+
       let imageUrl = currentImageUrl;
+      
       if (imageFile) {
         imageUrl = await convertAndCompressImage(imageFile);
+      } else if (!imageUrl && itemName) {
+        const searchKeyword = `${brand && brand !== "No Brand" ? brand : ""} ${itemName}`;
+        // @ts-ignore
+        imageUrl = typeof fetchAutoImage === "function" ? await fetchAutoImage(searchKeyword) : "";
       }
 
       let finalDate: Date;
@@ -361,13 +343,14 @@ export default function PurchasesPage() {
       }
 
       const totalCost = Number(qty) * Number(costPrice);
+      const finalBrand = brand && brand.trim() !== "" ? brand.trim() : "No Brand";
 
       const purchaseData = {
         supplierName: selectedSupplier,
         partNumber: partNumber.trim(),
         itemName: itemName.trim(),
         category: category || "General",
-        brand: brand || "Generic",
+        brand: finalBrand,
         qty: Number(qty),
         costPrice: Number(costPrice),
         sellingPrice: Number(sellingPrice),
@@ -394,7 +377,7 @@ export default function PurchasesPage() {
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
             category: category || prodDoc.data().category,
-            brand: brand || prodDoc.data().brand,
+            brand: finalBrand,
             isFavorite,
             ...(imageUrl ? { imageUrl } : {}),
             updatedAt: new Date(),
@@ -402,8 +385,9 @@ export default function PurchasesPage() {
         }
 
         alert("Purchase record updated successfully!");
+        resetForm();
       } else {
-        await addDoc(collection(db, "purchases"), purchaseData);
+        await setDoc(doc(db, "purchases", partNumber.trim()), purchaseData);
 
         const q = query(
           collection(db, "products"),
@@ -418,17 +402,17 @@ export default function PurchasesPage() {
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
             category: category || prodDoc.data().category,
-            brand: brand || prodDoc.data().brand,
+            brand: finalBrand,
             isFavorite,
             ...(imageUrl ? { imageUrl } : {}),
             updatedAt: new Date(),
           });
         } else {
-          await addDoc(collection(db, "products"), {
+          await setDoc(doc(db, "products", partNumber.trim()), {
             partNumber: partNumber.trim(),
             name: itemName.trim(),
             category: category || "General",
-            brand: brand || "Generic",
+            brand: finalBrand,
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
             stockQty: Number(qty),
@@ -439,18 +423,21 @@ export default function PurchasesPage() {
         }
 
         alert("Purchase saved successfully and stock updated!");
+        resetForm();
+        
+        if (supplierSelectRef.current) {
+          supplierSelectRef.current.focus();
+        }
       }
 
-      resetForm();
     } catch (error) {
       console.error("Purchase Error: ", error);
-      alert("An error occurred!");
+      setErrorMessage("දෝෂයක් සිදු විය: " + (error as Error).message);
     } finally {
       setUploading(false);
     }
   };
 
-  // Filter & Sort Logic for Purchases Table
   const filteredAndSortedPurchases = useMemo(() => {
     return purchases
       .filter((p) => {
@@ -481,16 +468,18 @@ export default function PurchasesPage() {
           return new Date(dateVal).getTime();
         };
 
-        return getTime(b.createdAt) - getTime(a.createdAt);
+        return getTime(b.createdAt) - getTime(getTime(a.createdAt));
       });
   }, [purchases, searchQuery, filterCategory, filterBrand, sortBy]);
 
   return (
-    <div className={`${darkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-800"} min-h-screen transition-colors duration-300`}>
+    <div 
+      onClick={handleScreenClick}
+      className={`${darkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-800"} min-h-screen transition-colors duration-300`}
+    >
       <div className="p-6 max-w-[1400px] mx-auto font-sans space-y-6">
         
-        {/* Header with Dark Mode Toggle */}
-        <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div>
             <h1 className="text-2xl font-extrabold flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
               <Truck className="w-7 h-7 text-blue-600 dark:text-blue-400" /> Supplier Purchases & Restocks
@@ -499,106 +488,231 @@ export default function PurchasesPage() {
               Record stock purchases from suppliers and automatically update inventory.
             </p>
           </div>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-2 text-xs font-semibold shadow-sm"
-            aria-label="Toggle Dark Mode"
-          >
-            {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
-            {darkMode ? "Light Mode" : "Dark Mode"}
-          </button>
+          <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
+            <button
+              onClick={() => {
+                if (showForm) {
+                  resetForm();
+                }
+                setShowForm(!showForm);
+              }}
+              className={`px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition flex items-center gap-2 shadow-sm ${
+                showForm 
+                  ? "bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-400 hover:bg-rose-100" 
+                  : "bg-blue-600 border-blue-600 text-white hover:bg-blue-700"
+              }`}
+            >
+              {showForm ? (
+                <>
+                  <EyeOff className="w-4 h-4" /> Hide Form
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" /> Add New Purchase
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-2 text-xs font-semibold shadow-sm"
+            >
+              {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+              {darkMode ? "Light" : "Dark"}
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left: Purchase Form */}
-          <form
-            onSubmit={handleSubmitPurchase}
-            className="lg:col-span-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5 h-fit"
-          >
-            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h2 className="font-bold text-base text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                {editingId ? <Edit3 className="w-4 h-4 text-amber-500" /> : <Sparkles className="w-4 h-4 text-blue-500" />}
-                {editingId ? "Edit Purchase" : "Record New Purchase"}
-              </h2>
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 font-bold flex items-center gap-1 transition"
-                >
-                  <X className="w-3 h-3" /> Cancel
-                </button>
+        <div className={`grid grid-cols-1 ${showForm ? "lg:grid-cols-12" : "lg:grid-cols-1"} gap-6 transition-all duration-300`}>
+          {showForm && (
+            <form
+              onSubmit={handleSubmitPurchase}
+              className="lg:col-span-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5 h-fit"
+            >
+              <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h2 className="font-bold text-base text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  {editingId ? <Edit3 className="w-4 h-4 text-amber-500" /> : <Sparkles className="w-4 h-4 text-blue-500" />}
+                  {editingId ? "Edit Purchase" : "Record New Purchase"}
+                </h2>
+                <div className="flex items-center gap-1.5">
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 font-bold flex items-center gap-1 transition"
+                    >
+                      <X className="w-3 h-3" /> Cancel
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetForm();
+                      setShowForm(false);
+                    }}
+                    className="text-xs bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 px-2.5 py-1 rounded-lg hover:bg-rose-100 font-bold flex items-center gap-1 transition"
+                    title="Close form"
+                  >
+                    <X className="w-3.5 h-3.5" /> Close
+                  </button>
+                </div>
+              </div>
+
+              {/* Clean Error Message UI Box */}
+              {errorMessage && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-between gap-2 shadow-sm animate-fadeIn">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                    <span>{errorMessage}</span>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setErrorMessage(null)}
+                    className="text-rose-700 dark:text-rose-300 hover:opacity-75 font-bold p-1"
+                  >
+                    ✕
+                  </button>
+                </div>
               )}
-            </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
-                <Store className="w-3.5 h-3.5 text-blue-500" /> Select Supplier
-              </label>
-              <select
-                value={selectedSupplier}
-                onChange={(e) => setSelectedSupplier(e.target.value)}
-                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                required
-              >
-                <option value="">-- Choose Supplier --</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.name}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
-                <CalendarDays className="w-3.5 h-3.5 text-blue-500" /> Purchase Date
-              </label>
-              <input
-                type="date"
-                value={purchaseDate}
-                onChange={(e) => setPurchaseDate(e.target.value)}
-                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 transition"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
-                  <Hash className="w-3.5 h-3.5 text-blue-500" /> Part Number
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                  <Store className="w-3.5 h-3.5 text-blue-500" /> Select Supplier
+                </label>
+                <select
+                  ref={supplierSelectRef}
+                  value={selectedSupplier}
+                  onChange={(e) => setSelectedSupplier(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  required
+                >
+                  <option value="">-- Choose Supplier --</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                  <CalendarDays className="w-3.5 h-3.5 text-blue-500" /> Purchase Date
                 </label>
                 <input
-                  type="text"
-                  placeholder="e.g. H4-BULB"
-                  value={partNumber}
-                  onChange={(e) => setPartNumber(e.target.value)}
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  required
+                  type="date"
+                  value={purchaseDate}
+                  onChange={(e) => setPurchaseDate(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 transition"
                 />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
-                  <Tag className="w-3.5 h-3.5 text-blue-500" /> Item Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. LED Headlight"
-                  value={itemName}
-                  onChange={(e) => setItemName(e.target.value)}
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  required
-                />
-              </div>
-            </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
-                <Layers className="w-3.5 h-3.5 text-blue-500" /> Category
-              </label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
+                    <Hash className="w-3.5 h-3.5 text-blue-500" /> Part Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. H4-BULB"
+                    value={partNumber}
+                    onChange={(e) => setPartNumber(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const formElements = e.currentTarget.form?.elements;
+                        if (formElements) {
+                          for (let i = 0; i < formElements.length; i++) {
+                            if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                              (formElements[i + 1] as HTMLElement).focus();
+                              break;
+                            }
+                          }
+                        }
+                      }
+                    }}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
+                    <Tag className="w-3.5 h-3.5 text-blue-500" /> Item Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. LED Headlight"
+                    value={itemName}
+                    onChange={(e) => setItemName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const formElements = e.currentTarget.form?.elements;
+                        if (formElements) {
+                          for (let i = 0; i < formElements.length; i++) {
+                            if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                              (formElements[i + 1] as HTMLElement).focus();
+                              break;
+                            }
+                          }
+                        }
+                      }
+                    }}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                  <Layers className="w-3.5 h-3.5 text-blue-500" /> Category
+                </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                 >
                   <option value="">-- Select Category --</option>
@@ -608,274 +722,314 @@ export default function PurchasesPage() {
                     </option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  onClick={() => setShowNewCatInput(!showNewCatInput)}
-                  className="px-3 py-1 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900 rounded-xl text-xs font-bold hover:bg-blue-100 whitespace-nowrap flex items-center gap-1 transition"
-                >
-                  <Plus className="w-3 h-3" /> New
-                </button>
-                {category && (
-                  <button
-                    type="button"
-                    onClick={handleDeleteCategory}
-                    className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
-                    title="Delete selected category"
-                  >
-                    <Trash2 className="w-3 h-3" /> Remove
-                  </button>
-                )}
               </div>
-              {showNewCatInput && (
-                <div className="flex gap-2 mt-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <input
-                    type="text"
-                    value={newCatName}
-                    onChange={(e) => setNewCatName(e.target.value)}
-                    placeholder="New Category"
-                    className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCategory}
-                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition"
-                  >
-                    <Check className="w-3 h-3" /> Save
-                  </button>
-                </div>
-              )}
-            </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
-                <Tag className="w-3.5 h-3.5 text-purple-500" /> Brand
-              </label>
-              <div className="flex gap-2">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                  <Tag className="w-3.5 h-3.5 text-purple-500" /> Brand (If blank, saved as No Brand)
+                </label>
                 <select
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                 >
-                  <option value="">-- Select Brand --</option>
+                  <option value="">-- No Brand / Select Brand --</option>
                   {brands.map((b) => (
                     <option key={b.id} value={b.name}>
                       {b.name}
                     </option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  onClick={() => setShowNewBrandInput(!showNewBrandInput)}
-                  className="px-3 py-1 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-900 rounded-xl text-xs font-bold hover:bg-purple-100 whitespace-nowrap flex items-center gap-1 transition"
-                >
-                  <Plus className="w-3 h-3" /> New
-                </button>
-                {brand && (
-                  <button
-                    type="button"
-                    onClick={handleDeleteBrand}
-                    className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
-                    title="Delete selected brand"
-                  >
-                    <Trash2 className="w-3 h-3" /> Remove
-                  </button>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                  <Package className="w-3.5 h-3.5 text-blue-500" /> Quantity
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={qty}
+                  onChange={(e) => setQty(e.target.value === "" ? "" : Number(e.target.value))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Cost Price (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={costPrice}
+                    onChange={(e) => setCostPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const formElements = e.currentTarget.form?.elements;
+                        if (formElements) {
+                          for (let i = 0; i < formElements.length; i++) {
+                            if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                              (formElements[i + 1] as HTMLElement).focus();
+                              break;
+                            }
+                          }
+                        }
+                      }
+                    }}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Selling Price (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={sellingPrice}
+                    onChange={(e) => setSellingPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.currentTarget.form?.requestSubmit();
+                      }
+                    }}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1 pb-1">
+                <input
+                  type="checkbox"
+                  id="isFavorite"
+                  checked={isFavorite}
+                  onChange={(e) => setIsFavorite(e.target.checked)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  className="w-4 h-4 text-amber-600 rounded border-slate-300 dark:border-slate-700 focus:ring-amber-500 cursor-pointer"
+                />
+                <label htmlFor="isFavorite" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  ⭐ Mark as Favorite Item
+                </label>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1 flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5 text-blue-500" /> Product Photo {editingId ? "(Optional)" : "(Optional)"}
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const formElements = e.currentTarget.form?.elements;
+                      if (formElements) {
+                        for (let i = 0; i < formElements.length; i++) {
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
+                            break;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full text-xs text-slate-600 dark:text-slate-300 focus:outline-none file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-600 dark:file:text-blue-400 file:cursor-pointer file:font-semibold"
+                />
+                
+                {(imageFile || currentImageUrl) && (
+                  <div className="mt-2.5 flex items-center gap-2.5 p-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl">
+                    <img
+                      src={imageFile ? URL.createObjectURL(imageFile) : currentImageUrl}
+                      alt="Product Preview"
+                      className="w-10 h-10 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm"
+                    />
+                    <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                      {imageFile ? "New image selected" : "Current saved image"}
+                    </span>
+                  </div>
                 )}
               </div>
-              {showNewBrandInput && (
-                <div className="flex gap-2 mt-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <input
-                    type="text"
-                    value={newBrandName}
-                    onChange={(e) => setNewBrandName(e.target.value)}
-                    placeholder="New Brand"
-                    className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddBrand}
-                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition"
-                  >
-                    <Check className="w-3 h-3" /> Save
-                  </button>
-                </div>
-              )}
-            </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
-                <Package className="w-3.5 h-3.5 text-blue-500" /> Quantity
-              </label>
-              <input
-                type="number"
-                placeholder="0"
-                value={qty}
-                onChange={(e) =>
-                  setQty(e.target.value === "" ? "" : Number(e.target.value))
-                }
-                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                required
-              />
-            </div>
+              <button
+                type="submit"
+                disabled={uploading}
+                className={`w-full text-white font-bold py-3 rounded-xl transition shadow-md text-xs mt-3 disabled:bg-slate-400 flex items-center justify-center gap-2 ${
+                  editingId
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {uploading ? (
+                  "Saving..."
+                ) : editingId ? (
+                  <>
+                    <Edit3 className="w-4 h-4" /> Update Purchase
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" /> Save Purchase & Update Stock
+                  </>
+                )}
+              </button>
+            </form>
+          )}
 
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Cost Price (Rs.)
-                </label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={costPrice}
-                  onChange={(e) =>
-                    setCostPrice(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> Selling Price (Rs.)
-                </label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={sellingPrice}
-                  onChange={(e) =>
-                    setSellingPrice(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Favorite Checkbox in Form */}
-            <div className="flex items-center gap-2 pt-1 pb-1">
-              <input
-                type="checkbox"
-                id="isFavorite"
-                checked={isFavorite}
-                onChange={(e) => setIsFavorite(e.target.checked)}
-                className="w-4 h-4 text-amber-600 rounded border-slate-300 dark:border-slate-700 focus:ring-amber-500 cursor-pointer"
-              />
-              <label htmlFor="isFavorite" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-                ⭐ Mark as Favorite Item
-              </label>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1 flex items-center gap-1.5">
-                <ImageIcon className="w-3.5 h-3.5 text-blue-500" /> Product Photo{" "}
-                {editingId ? "(Optional: For change only)" : "(Optional)"}
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                className="w-full text-xs text-slate-600 dark:text-slate-300 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-600 dark:file:text-blue-400 file:cursor-pointer file:font-semibold"
-              />
-              
-              {(imageFile || currentImageUrl) && (
-                <div className="mt-2.5 flex items-center gap-2.5 p-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl">
-                  <img
-                    src={imageFile ? URL.createObjectURL(imageFile) : currentImageUrl}
-                    alt="Product Preview"
-                    className="w-10 h-10 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm"
-                  />
-                  <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                    {imageFile ? "New image selected" : "Current saved image"}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={uploading}
-              className={`w-full text-white font-bold py-3 rounded-xl transition shadow-md text-xs mt-3 disabled:bg-slate-400 flex items-center justify-center gap-2 ${
-                editingId
-                  ? "bg-amber-600 hover:bg-amber-700"
-                  : "bg-blue-600 hover:bg-blue-700"
-              }`}
-            >
-              {uploading ? (
-                "Saving..."
-              ) : editingId ? (
-                <>
-                  <Edit3 className="w-4 h-4" /> Update Purchase
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" /> Save Purchase & Update Stock
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Right: Purchase History Table */}
-          <div className="lg:col-span-8 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div className={`${showForm ? "lg:col-span-8" : "lg:col-span-12"} bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 transition-all duration-300`}>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
               <h2 className="font-bold text-base text-slate-800 dark:text-slate-200 flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-500" /> Purchase History ({filteredAndSortedPurchases.length})
               </h2>
 
-              {/* Search, Filter & Sort Controls */}
-              <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                <div className="relative w-full sm:w-48">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    placeholder="Search name, part #..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="p-2 pl-8 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 w-full transition"
-                  />
+              <div className="flex flex-wrap items-center justify-end gap-2 w-full md:w-auto overflow-hidden">
+                <div
+                  className={`relative transition-all duration-500 ease-in-out ${
+                    searchQuery
+                      ? "w-full sm:w-72"
+                      : "w-full sm:w-48 focus-within:w-full sm:focus-within:w-72"
+                  }`}
+                >
+                  <div className="relative group">
+                    <Search
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4
+                        text-slate-400 dark:text-slate-500
+                        group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400
+                        transition-colors duration-200 pointer-events-none"
+                    />
+
+                    <input
+                      type="text"
+                      placeholder="Search name, part #..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="
+                        w-full h-10 pl-9 pr-9
+                        rounded-xl
+                        border border-slate-200 dark:border-slate-700
+                        bg-white dark:bg-slate-800/80
+                        text-xs font-medium
+                        text-slate-800 dark:text-slate-100
+                        placeholder:text-slate-400 dark:placeholder:text-slate-500
+                        shadow-sm
+                        outline-none
+                        transition-all duration-200
+                        hover:border-slate-300 dark:hover:border-slate-600
+                        focus:border-blue-500 dark:focus:border-blue-500
+                        focus:ring-4 focus:ring-blue-500/10
+                        focus:bg-white dark:focus:bg-slate-800
+                      "
+                    />
+
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        className="
+                          absolute right-2 top-1/2 -translate-y-1/2
+                          w-6 h-6 rounded-lg
+                          flex items-center justify-center
+                          text-slate-400
+                          hover:text-slate-600 dark:hover:text-slate-200
+                          hover:bg-slate-100 dark:hover:bg-slate-700
+                          transition-all duration-200
+                        "
+                        aria-label="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
-                >
-                  <option value="all">All Categories</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={filterBrand}
-                  onChange={(e) => setFilterBrand(e.target.value)}
-                  className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
-                >
-                  <option value="all">All Brands</option>
-                  {brands.map((b) => (
-                    <option key={b.id} value={b.name}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-
-                <div className="relative flex items-center">
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
+                <div className={`flex flex-wrap gap-2 transition-all duration-500 ease-in-out items-center ${searchQuery ? "opacity-0 max-h-0 overflow-hidden sm:opacity-100 sm:max-h-20" : "opacity-100 max-h-20"}`}>
                   <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="p-2 pl-7 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                    className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
                   >
-                    <option value="latest">Sort: Latest (Default)</option>
-                    <option value="name-asc">Sort: Name (A to Z)</option>
-                    <option value="name-desc">Sort: Name (Z to A)</option>
-                    <option value="price-low">Sort: Cost (Low to High)</option>
-                    <option value="price-high">Sort: Cost (High to Low)</option>
+                    <option value="all">All Categories</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
                   </select>
+
+                  <select
+                    value={filterBrand}
+                    onChange={(e) => setFilterBrand(e.target.value)}
+                    className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
+                  >
+                    <option value="all">All Brands</option>
+                    {brands.map((b) => (
+                      <option key={b.id} value={b.name}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="relative flex items-center">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="p-2 pl-7 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
+                    >
+                      <option value="latest">Sort: Latest (Default)</option>
+                      <option value="name-asc">Sort: Name (A to Z)</option>
+                      <option value="name-desc">Sort: Name (Z to A)</option>
+                      <option value="price-low">Sort: Cost (Low to High)</option>
+                      <option value="price-high">Sort: Cost (High to Low)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -935,17 +1089,16 @@ export default function PurchasesPage() {
                               <button
                                 type="button"
                                 onClick={async () => {
-                                  if (!p.id) return;
-                                  try {
-                                    await updateDoc(doc(db, "purchases", p.id), {
-                                      isFavorite: !p.isFavorite,
-                                    });
-                                  } catch (err) {
-                                    console.error(err);
-                                  }
-                                }}
+                                 if (!p.id) return;
+                                 try {
+                                   await updateDoc(doc(db, "purchases", p.id), {
+                                     isFavorite: !p.isFavorite,
+                                   });
+                                 } catch (err) {
+                                   console.error(err);
+                                 }
+                               }}
                                 className="text-base hover:scale-110 transition cursor-pointer focus:outline-none"
-                                title="Click to toggle favorite"
                               >
                                 {p.isFavorite ? "⭐" : "☆"}
                               </button>
@@ -962,7 +1115,7 @@ export default function PurchasesPage() {
                               {p.category || "General"}
                             </span>
                             <span className="bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-md text-[10px] font-semibold border border-purple-200 dark:border-purple-900 block w-fit">
-                              {p.brand || "Generic"}
+                              {p.brand || "No Brand"}
                             </span>
                           </td>
                           <td className="p-3 text-center font-extrabold text-slate-800 dark:text-slate-200">{p.qty}</td>

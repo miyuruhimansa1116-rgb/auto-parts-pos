@@ -12,6 +12,20 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { Product } from "@/types/product";
+import {
+  Package,
+  Plus,
+  Search,
+  Star,
+  Edit,
+  Trash2,
+  X,
+  FileText,
+  Image as ImageIcon,
+  RefreshCw,
+  Check,
+  ChevronDown,
+} from "lucide-react";
 
 interface ItemOption {
   id: string;
@@ -54,6 +68,21 @@ export default function InventoryPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Stock Update Quick Modal States
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [addStockQty, setAddStockQty] = useState("");
+
+  // Custom Searchable Dropdown States for Stock Update
+  const [stockSearchQuery, setStockSearchQuery] = useState("");
+  const [stockFilterCategory, setStockFilterCategory] = useState("all");
+  const [stockFilterBrand, setStockFilterBrand] = useState("all");
+  const [isStockDropdownOpen, setIsStockDropdownOpen] = useState(false);
+
+  // View Details Modal State
+  const [viewProduct, setViewProduct] = useState<any | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   // Filter & Search & Sort States
   const [searchQuery, setSearchQuery] = useState("");
@@ -169,7 +198,8 @@ export default function InventoryPage() {
   };
 
   // Direct Toggle Favorite from Table
-  const toggleFavorite = async (id: string, currentStatus: boolean) => {
+  const toggleFavorite = async (id: string, currentStatus: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       await updateDoc(doc(db, "products", id), {
         isFavorite: !currentStatus,
@@ -199,14 +229,9 @@ export default function InventoryPage() {
     setEntryDate(today.toLocaleDateString('en-US'));
   };
 
-  // Open Add Modal
-  const handleOpenAddModal = () => {
-    resetForm();
-    setIsModalOpen(true);
-  };
-
   // Edit Click
-  const handleEditClick = (p: Product & { isFavorite?: boolean; supplier?: string; costPrice?: number; stockQty?: number; entryDate?: string }) => {
+  const handleEditClick = (p: Product & { isFavorite?: boolean; supplier?: string; costPrice?: number; stockQty?: number; entryDate?: string }, e: React.MouseEvent) => {
+    e.stopPropagation();
     setEditingId(p.id || null);
     setPartNumber(p.partNumber || "");
     setName(p.name || "");
@@ -223,7 +248,7 @@ export default function InventoryPage() {
     setIsModalOpen(true);
   };
 
-  // Submit Form
+  // Submit Product Form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!partNumber || !name || !sellingPrice) {
@@ -275,14 +300,80 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  // Handle Quick Stock Update Submission
+  const handleStockUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProductId || !addStockQty) {
+      alert("Please select a product and enter stock quantity!");
+      return;
+    }
+
+    try {
+      const selectedProduct: any = products.find((p) => p.id === selectedProductId);
+      if (!selectedProduct) return;
+
+      const currentQty = Number(selectedProduct.stockQty) || 0;
+      const addedQty = Number(addStockQty) || 0;
+      const newTotalQty = currentQty + addedQty;
+
+      await updateDoc(doc(db, "products", selectedProductId), {
+        stockQty: newTotalQty,
+        updatedAt: new Date(),
+      });
+
+      alert(`Stock updated successfully! New total: ${newTotalQty} units`);
+      setSelectedProductId("");
+      setAddStockQty("");
+      setStockSearchQuery("");
+      setStockFilterCategory("all");
+      setStockFilterBrand("all");
+      setIsStockModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update stock!");
+    }
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (confirm("Are you sure you want to delete this item?")) {
       await deleteDoc(doc(db, "products", id));
       if (editingId === id) resetForm();
     }
   };
 
-  // Filtering and Sorting Logic
+  // Handle Row Click to View Full Details
+  const handleRowClick = (product: any) => {
+    setViewProduct(product);
+    setIsViewModalOpen(true);
+  };
+
+  // Sorted & Filtered Products for Stock Update Dropdown (A to Z by Name)
+  const sortedStockProducts = useMemo(() => {
+    return [...products]
+      .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""))
+      .filter((p: any) => {
+        const query = stockSearchQuery.toLowerCase();
+        const matchesQuery =
+          (p.name && p.name.toLowerCase().includes(query)) ||
+          (p.partNumber && p.partNumber.toLowerCase().includes(query));
+        
+        const matchesCategory =
+          stockFilterCategory === "all" || p.category === stockFilterCategory;
+        
+        const matchesBrand =
+          stockFilterBrand === "all" || p.brand === stockFilterBrand;
+
+        return matchesQuery && matchesCategory && matchesBrand;
+      });
+  }, [products, stockSearchQuery, stockFilterCategory, stockFilterBrand]);
+
+  // Selected Product Object for Display
+  const selectedProductObj = useMemo(() => {
+    return products.find((p: any) => p.id === selectedProductId);
+  }, [products, selectedProductId]);
+
+  // Filtering and Sorting Logic for Main Table
   const filteredAndSortedProducts = useMemo(() => {
     return products
       .filter((p: any) => {
@@ -315,91 +406,132 @@ export default function InventoryPage() {
   }, [products, searchQuery, filterCategory, filterBrand, filterFavorite, sortBy]);
 
   return (
-    <div className="p-6 md:p-8 max-w-[1400px] mx-auto font-sans bg-gray-50/50 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-100">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">📦 Inventory Management</h1>
-        <button
-          onClick={handleOpenAddModal}
-          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5"
-        >
-          + Add New Product
-        </button>
+    <div className="p-3 sm:p-6 md:p-8 max-w-[1400px] mx-auto font-sans bg-gray-50/50 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-100 pb-20">
+      
+      {/* Header Section */}
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
+          <Package className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" /> 
+          <span>Inventory Management</span>
+        </h1>
+        
+        {/* Action Buttons: Responsive full-width on mobile */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => {
+              resetForm();
+              setIsModalOpen(true);
+            }}
+            className="flex-1 sm:flex-initial px-3 py-2.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-semibold shadow-sm transition flex items-center justify-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" /> Add Product
+          </button>
+          
+          <button
+            onClick={() => {
+              setSelectedProductId("");
+              setAddStockQty("");
+              setStockSearchQuery("");
+              setStockFilterCategory("all");
+              setStockFilterBrand("all");
+              setIsStockModalOpen(true);
+            }}
+            className="flex-1 sm:flex-initial px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center justify-center gap-1.5"
+          >
+            <RefreshCw className="w-4 h-4" /> Update Stock
+          </button>
+        </div>
       </div>
 
-      {/* Product List Table - Full Width */}
-      <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pb-2 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="font-semibold text-base text-gray-800 dark:text-gray-100">
+      {/* Product List Card */}
+      <div className="bg-white dark:bg-gray-800 p-3 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
+        
+        {/* Controls Container */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pb-2 border-b border-gray-100 dark:border-gray-700">
+          <h2 className="font-semibold text-sm sm:text-base text-gray-800 dark:text-gray-100">
             Product List <span className="text-xs text-gray-400 dark:text-gray-500 font-normal">({filteredAndSortedProducts.length})</span>
           </h2>
 
-          {/* Search, Filter & Sort Controls */}
-          <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <input
-              type="text"
-              placeholder="🔍 Search name or part #..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-3 py-1.5 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-800 dark:text-gray-100 font-medium focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none w-full sm:w-40"
-            />
+          {/* Search, Filter & Sort Controls: Fully responsive grid/flex */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full lg:w-auto items-center">
+            
+            {/* Search Bar */}
+            <div className="col-span-2 sm:w-64 relative">
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search name, part #..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-9 sm:h-10 pl-9 pr-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder:text-slate-400 shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
 
             <select
               value={filterFavorite}
               onChange={(e) => setFilterFavorite(e.target.value)}
-              className="px-2.5 py-1.5 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-800 dark:text-gray-100 font-medium focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 outline-none"
+              className="px-2.5 py-2 sm:py-1.5 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-800 dark:text-gray-100 font-medium outline-none"
             >
-              <option value="all">⭐ All Items</option>
-              <option value="favorites">⭐ Favorites Only</option>
+              <option value="all">All Items</option>
+              <option value="favorites">Favorites Only</option>
             </select>
 
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-2.5 py-1.5 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-800 dark:text-gray-100 font-medium focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 outline-none"
+              className="px-2.5 py-2 sm:py-1.5 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-800 dark:text-gray-100 font-medium outline-none"
             >
               <option value="all">All Categories</option>
               {categories.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name}
-                </option>
+                <option key={c.id} value={c.name}>{c.name}</option>
               ))}
             </select>
 
             <select
               value={filterBrand}
               onChange={(e) => setFilterBrand(e.target.value)}
-              className="px-2.5 py-1.5 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-800 dark:text-gray-100 font-medium focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 outline-none"
+              className="px-2.5 py-2 sm:py-1.5 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-800 dark:text-gray-100 font-medium outline-none"
             >
               <option value="all">All Brands</option>
               {brands.map((b) => (
-                <option key={b.id} value={b.name}>
-                  {b.name}
-                </option>
+                <option key={b.id} value={b.name}>{b.name}</option>
               ))}
             </select>
 
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-2.5 py-1.5 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-800 dark:text-gray-100 font-medium focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 outline-none"
+              className="col-span-2 sm:col-span-1 px-2.5 py-2 sm:py-1.5 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-800 dark:text-gray-100 font-medium outline-none"
             >
               <option value="latest">Sort: Latest</option>
-              <option value="name-asc">Sort: Name (A to Z)</option>
-              <option value="name-desc">Sort: Name (Z to A)</option>
-              <option value="price-low">Sort: Price (Low to High)</option>
-              <option value="price-high">Sort: Price (High to Low)</option>
+              <option value="name-asc">Sort: Name (A-Z)</option>
+              <option value="name-desc">Sort: Name (Z-A)</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
             </select>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        {/* Table / List Container */}
+        <div className="overflow-x-auto -mx-3 sm:mx-0">
+          <table className="w-full text-left text-xs border-collapse min-w-[650px]">
             <thead>
               <tr className="bg-gray-50/80 dark:bg-gray-700/80 text-gray-500 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700 uppercase tracking-wider text-[11px] font-semibold">
                 <th className="p-3">Image</th>
                 <th className="p-3">Part No</th>
                 <th className="p-3">Product Name</th>
-                <th className="p-3">Category / Brand</th>
+                <th className="p-3">Stock Qty</th>
                 <th className="p-3 text-right">Selling Price</th>
                 <th className="p-3 text-center">Actions</th>
               </tr>
@@ -416,7 +548,9 @@ export default function InventoryPage() {
                   return (
                     <tr
                       key={p.id}
-                      className="transition hover:bg-gray-50/80 dark:hover:bg-gray-700/50"
+                      onClick={() => handleRowClick(p)}
+                      className="transition hover:bg-blue-50/40 dark:hover:bg-gray-700/50 cursor-pointer"
+                      title="Click to view full details"
                     >
                       <td className="p-3">
                         {p.imageUrl ? (
@@ -427,7 +561,7 @@ export default function InventoryPage() {
                           />
                         ) : (
                           <div className="w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 flex items-center justify-center text-[10px] text-gray-400 font-medium">
-                            No Pic
+                            <ImageIcon className="w-4 h-4" />
                           </div>
                         )}
                       </td>
@@ -438,38 +572,41 @@ export default function InventoryPage() {
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => toggleFavorite(p.id, p.isFavorite)}
-                            className="text-base hover:scale-110 transition cursor-pointer focus:outline-none"
+                            onClick={(e) => toggleFavorite(p.id, p.isFavorite, e)}
+                            className="hover:scale-110 transition cursor-pointer focus:outline-none"
                             title="Click to toggle favorite"
                           >
-                            {p.isFavorite ? "⭐" : "☆"}
+                            <Star
+                              className={`w-4 h-4 ${
+                                p.isFavorite
+                                  ? "text-amber-500 fill-amber-500"
+                                  : "text-gray-300 dark:text-gray-600"
+                              }`}
+                            />
                           </button>
                           <span className="truncate">{p.name}</span>
                         </div>
                       </td>
-                      <td className="p-3 whitespace-nowrap space-y-1">
-                        <span className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-md text-[10px] font-medium block w-fit">
-                          {p.category || "General"}
-                        </span>
-                        <span className="bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-md text-[10px] font-medium border border-purple-100 dark:border-purple-900 block w-fit">
-                          {p.brand || "Generic"}
+                      <td className="p-3 whitespace-nowrap font-semibold">
+                        <span className={`px-2 py-1 rounded-lg text-xs ${Number(p.stockQty) > 0 ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'}`}>
+                          {p.stockQty || 0} Units
                         </span>
                       </td>
                       <td className="p-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
                         Rs. {p.sellingPrice ? p.sellingPrice.toLocaleString() : "0"}
                       </td>
-                      <td className="p-3 text-center space-x-3 whitespace-nowrap">
+                      <td className="p-3 text-center space-x-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => handleEditClick(p)}
-                          className="text-amber-600 dark:text-amber-400 hover:text-amber-700 font-semibold transition"
+                          onClick={(e) => handleEditClick(p, e)}
+                          className="text-amber-600 dark:text-amber-400 hover:text-amber-700 font-semibold transition inline-flex items-center gap-1"
                         >
-                          Edit
+                          <Edit className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
-                          onClick={() => p.id && handleDelete(p.id)}
-                          className="text-rose-600 dark:text-rose-400 hover:text-rose-700 font-semibold transition"
+                          onClick={(e) => p.id && handleDelete(p.id, e)}
+                          className="text-rose-600 dark:text-rose-400 hover:text-rose-700 font-semibold transition inline-flex items-center gap-1"
                         >
-                          Delete
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
                       </td>
                     </tr>
@@ -481,13 +618,226 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Modal / Popup for Add/Edit Form */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto space-y-4">
+      {/* Quick Stock Update Modal */}
+      {isStockModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xl w-full max-w-md space-y-4 my-auto">
             <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="font-semibold text-base text-gray-800 dark:text-gray-100">
-                {editingId ? "✏️ Edit Product" : "+ Add New Product"}
+              <h2 className="font-semibold text-base text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
+                <RefreshCw className="w-4 h-4 text-emerald-600" /> Quick Stock Update
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsStockModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleStockUpdateSubmit} className="space-y-4">
+              <div className="space-y-1 relative">
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Select Product (A to Z)</label>
+                
+                <div 
+                  onClick={() => setIsStockDropdownOpen(!isStockDropdownOpen)}
+                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 flex justify-between items-center cursor-pointer"
+                >
+                  <span className="truncate">
+                    {selectedProductObj 
+                      ? `${selectedProductObj.partNumber} - ${selectedProductObj.name} (Stock: ${selectedProductObj.stockQty || 0})`
+                      : "-- Search or Select Product --"}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
+                </div>
+
+                {/* Dropdown Menu */}
+                {isStockDropdownOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 max-h-[350px] overflow-hidden flex flex-col">
+                    <div className="p-2.5 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 space-y-2">
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search name or part no..."
+                          value={stockSearchQuery}
+                          onChange={(e) => setStockSearchQuery(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-xs outline-none text-gray-800 dark:text-gray-100"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <select
+                          value={stockFilterCategory}
+                          onChange={(e) => setStockFilterCategory(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="px-2 py-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-[11px] text-gray-700 dark:text-gray-200 outline-none"
+                        >
+                          <option value="all">All Categories</option>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.name}>{c.name}</option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={stockFilterBrand}
+                          onChange={(e) => setStockFilterBrand(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="px-2 py-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-[11px] text-gray-700 dark:text-gray-200 outline-none"
+                        >
+                          <option value="all">All Brands</option>
+                          {brands.map((b) => (
+                            <option key={b.id} value={b.name}>{b.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="overflow-y-auto max-h-56 divide-y divide-gray-50 dark:divide-gray-700">
+                      {sortedStockProducts.length === 0 ? (
+                        <div className="p-3 text-center text-gray-400 text-xs">No products found</div>
+                      ) : (
+                        sortedStockProducts.map((p: any) => (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              setSelectedProductId(p.id);
+                              setIsStockDropdownOpen(false);
+                              setStockSearchQuery("");
+                              setStockFilterCategory("all");
+                              setStockFilterBrand("all");
+                            }}
+                            className={`p-2.5 text-xs hover:bg-emerald-50 dark:hover:bg-gray-700 cursor-pointer flex items-center justify-between transition ${
+                              selectedProductId === p.id ? 'bg-emerald-50/80 dark:bg-gray-700/80 text-emerald-700 dark:text-emerald-300 font-semibold' : 'text-gray-700 dark:text-gray-200'
+                            }`}
+                          >
+                            <span className="truncate">
+                              <strong className="font-mono text-blue-600 dark:text-blue-400">{p.partNumber}</strong> - {p.name} <span className="text-gray-400 font-normal">(Stock: {p.stockQty || 0})</span>
+                            </span>
+                            {selectedProductId === p.id && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-1" />}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Quantity to Add (+)</label>
+                <input
+                  type="number"
+                  value={addStockQty}
+                  onChange={(e) => setAddStockQty(e.target.value)}
+                  placeholder="e.g. 10"
+                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 outline-none"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsStockModalOpen(false)}
+                  className="w-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2.5 rounded-xl font-semibold text-xs transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-semibold text-xs transition shadow-sm"
+                >
+                  Update Stock
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Full Details Modal */}
+      {isViewModalOpen && viewProduct && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto space-y-4 my-auto">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="font-semibold text-base text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span>Product Details</span>
+                {viewProduct.isFavorite && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline" />}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsViewModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex justify-center my-2">
+              {viewProduct.imageUrl ? (
+                <img
+                  src={viewProduct.imageUrl}
+                  alt={viewProduct.name}
+                  className="w-32 h-32 object-cover rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm"
+                />
+              ) : (
+                <div className="w-32 h-32 bg-gray-100 dark:bg-gray-700 rounded-2xl border border-gray-200 dark:border-gray-600 flex items-center justify-center text-xs text-gray-400 font-medium">
+                  No Image
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50/60 dark:bg-gray-700/50 p-4 rounded-xl space-y-3 text-xs">
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Product Name:</span>
+                <span className="font-bold text-gray-900 dark:text-white text-right">{viewProduct.name}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Part Number:</span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{viewProduct.partNumber}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Category:</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">{viewProduct.category || "General"}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Brand:</span>
+                <span className="font-semibold text-purple-700 dark:text-purple-300">{viewProduct.brand || "Generic"}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Selling Price:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">Rs. {viewProduct.sellingPrice ? viewProduct.sellingPrice.toLocaleString() : "0"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Stock Quantity:</span>
+                <span className={`font-bold ${Number(viewProduct.stockQty) > 0 ? 'text-blue-600' : 'text-rose-500'}`}>
+                  {viewProduct.stockQty || 0} Units
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsViewModalOpen(false)}
+              className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2.5 rounded-xl font-semibold text-xs transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for Add/Edit Form */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto space-y-4 my-auto">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="font-semibold text-base text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
+                {editingId ? <Edit className="w-4 h-4 text-amber-600" /> : <Plus className="w-4 h-4 text-blue-600" />}
+                {editingId ? "Edit Product" : "Add New Product"}
               </h2>
               <button
                 type="button"
@@ -495,26 +845,23 @@ export default function InventoryPage() {
                   resetForm();
                   setIsModalOpen(false);
                 }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm font-bold"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Select Supplier */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Select Supplier</label>
                 <select
                   value={supplier}
                   onChange={(e) => setSupplier(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none"
+                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 outline-none"
                 >
                   <option value="">-- Choose Supplier --</option>
                   {suppliers.map((s) => (
-                    <option key={s.id} value={s.name}>
-                      {s.name}
-                    </option>
+                    <option key={s.id} value={s.name}>{s.name}</option>
                   ))}
                 </select>
               </div>
@@ -525,8 +872,7 @@ export default function InventoryPage() {
                   type="text"
                   value={partNumber}
                   onChange={(e) => setPartNumber(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none"
-                  placeholder="e.g. ALT-102"
+                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 outline-none"
                   required
                 />
               </div>
@@ -537,75 +883,59 @@ export default function InventoryPage() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none"
-                  placeholder="e.g. Starter Motor"
+                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 outline-none"
                   required
                 />
               </div>
 
-              {/* Favorite Checkbox Option */}
-              <div className="flex items-center gap-2 pt-1 pb-1">
+              <div className="flex items-center gap-2 pt-1">
                 <input
                   type="checkbox"
                   id="isFavoriteCheckbox"
                   checked={isFavorite}
                   onChange={(e) => setIsFavorite(e.target.checked)}
-                  className="w-4 h-4 text-amber-600 rounded border-gray-300 dark:border-gray-600 focus:ring-amber-500 cursor-pointer"
+                  className="w-4 h-4 text-amber-600 rounded border-gray-300 cursor-pointer"
                 />
-                <label htmlFor="isFavoriteCheckbox" className="text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                  ⭐ Mark as Favorite (POS Quick Item)
+                <label htmlFor="isFavoriteCheckbox" className="text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer flex items-center gap-1.5">
+                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline" /> Mark as Favorite (POS Quick Item)
                 </label>
               </div>
 
-              {/* Entry Date */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Entry Date</label>
-                <input
-                  type="text"
-                  value={entryDate}
-                  onChange={(e) => setEntryDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none"
-                />
-              </div>
-
-              {/* Category Dropdown */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Category</label>
                 <div className="flex gap-2">
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none"
+                    className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 outline-none"
                   >
                     <option value="">-- Select Category --</option>
                     {categories.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
+                      <option key={c.id} value={c.name}>{c.name}</option>
                     ))}
                   </select>
                   <button
                     type="button"
                     onClick={() => setShowNewCatInput(!showNewCatInput)}
-                    className="px-3 py-2 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900 rounded-xl text-xs font-semibold hover:bg-blue-100 dark:hover:bg-blue-900 transition whitespace-nowrap"
+                    className="px-3 py-2 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1"
                   >
-                    + New
+                    <Plus className="w-3.5 h-3.5" /> New
                   </button>
                 </div>
 
                 {showNewCatInput && (
-                  <div className="flex gap-2 mt-2 bg-gray-50 dark:bg-gray-700 p-2.5 rounded-xl border border-gray-200 dark:border-gray-600">
+                  <div className="flex gap-2 mt-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-xl border border-gray-200 dark:border-gray-600">
                     <input
                       type="text"
                       value={newCatName}
                       onChange={(e) => setNewCatName(e.target.value)}
                       placeholder="New Category Name"
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 rounded-lg text-xs outline-none text-gray-800 dark:text-gray-100"
                     />
                     <button
                       type="button"
                       onClick={handleAddCategory}
-                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition whitespace-nowrap"
+                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold whitespace-nowrap"
                     >
                       Save
                     </button>
@@ -613,44 +943,41 @@ export default function InventoryPage() {
                 )}
               </div>
 
-              {/* Brand Dropdown */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Brand</label>
                 <div className="flex gap-2">
                   <select
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none"
+                    className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 outline-none"
                   >
                     <option value="">-- Select Brand --</option>
                     {brands.map((b) => (
-                      <option key={b.id} value={b.name}>
-                        {b.name}
-                      </option>
+                      <option key={b.id} value={b.name}>{b.name}</option>
                     ))}
                   </select>
                   <button
                     type="button"
                     onClick={() => setShowNewBrandInput(!showNewBrandInput)}
-                    className="px-3 py-2 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-900 rounded-xl text-xs font-semibold hover:bg-purple-100 dark:hover:bg-purple-900 transition whitespace-nowrap"
+                    className="px-3 py-2 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-900 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1"
                   >
-                    + New
+                    <Plus className="w-3.5 h-3.5" /> New
                   </button>
                 </div>
 
                 {showNewBrandInput && (
-                  <div className="flex gap-2 mt-2 bg-gray-50 dark:bg-gray-700 p-2.5 rounded-xl border border-gray-200 dark:border-gray-600">
+                  <div className="flex gap-2 mt-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-xl border border-gray-200 dark:border-gray-600">
                     <input
                       type="text"
                       value={newBrandName}
                       onChange={(e) => setNewBrandName(e.target.value)}
                       placeholder="New Brand Name"
-                      className="w-full px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-purple-500/20"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 rounded-lg text-xs outline-none text-gray-800 dark:text-gray-100"
                     />
                     <button
                       type="button"
                       onClick={handleAddBrand}
-                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition whitespace-nowrap"
+                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold whitespace-nowrap"
                     >
                       Save
                     </button>
@@ -658,7 +985,6 @@ export default function InventoryPage() {
                 )}
               </div>
 
-              {/* Cost Price & Selling Price side by side */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Cost Price</label>
@@ -666,7 +992,7 @@ export default function InventoryPage() {
                     type="number"
                     value={costPrice}
                     onChange={(e) => setCostPrice(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none"
+                    className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -675,32 +1001,29 @@ export default function InventoryPage() {
                     type="number"
                     value={sellingPrice}
                     onChange={(e) => setSellingPrice(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none"
+                    className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 outline-none"
                     required
                   />
                 </div>
               </div>
 
-              {/* Stock Qty */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Stock Qty</label>
                 <input
                   type="number"
                   value={stockQty}
                   onChange={(e) => setStockQty(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition outline-none"
+                  className="w-full px-3 py-2 bg-gray-50/50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-100 outline-none"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block">
-                  Product Photo {editingId ? "(Optional: For change only)" : "(Optional)"}
-                </label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block">Product Photo</label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-gray-500 dark:text-gray-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-gray-100 dark:file:bg-gray-700 file:text-gray-700 dark:file:text-gray-200 hover:file:bg-gray-200 dark:hover:file:bg-gray-600 transition cursor-pointer"
+                  className="w-full text-xs text-gray-500 dark:text-gray-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-gray-100 dark:file:bg-gray-700 file:text-gray-700 dark:file:text-gray-200 cursor-pointer"
                 />
               </div>
 
@@ -711,22 +1034,18 @@ export default function InventoryPage() {
                     resetForm();
                     setIsModalOpen(false);
                   }}
-                  className="w-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition hover:bg-gray-200 dark:hover:bg-gray-600"
+                  className="w-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2.5 rounded-xl font-semibold text-xs transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={uploading}
-                  className={`w-1/2 text-white py-2.5 rounded-xl font-semibold text-xs tracking-wide transition shadow-sm disabled:bg-gray-300 dark:disabled:bg-gray-700 ${
+                  className={`w-1/2 text-white py-2.5 rounded-xl font-semibold text-xs transition shadow-sm disabled:bg-gray-300 ${
                     editingId ? "bg-amber-600 hover:bg-amber-700" : "bg-blue-600 hover:bg-blue-700"
                   }`}
                 >
-                  {uploading
-                    ? "Saving..."
-                    : editingId
-                    ? "Update Product"
-                    : "+ Add Product"}
+                  {uploading ? "Saving..." : editingId ? "Update Product" : "Add Product"}
                 </button>
               </div>
             </form>

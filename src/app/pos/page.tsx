@@ -1,4 +1,5 @@
 // src/app/pos/page.tsx
+"use intl"; // හෝ "use client"; (ඔබේ වර්තමාන කේතයේ ඇති පරිදි)
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -54,6 +55,8 @@ export default function POSPage() {
   // Draft States
   const [draftTitle, setDraftTitle] = useState("");
   const [showDraftsModal, setShowDraftsModal] = useState(false);
+  // මොබයිල් සඳහා ටැබ් මාරු කිරීමට (products හෝ cart/billing බලන්න)
+  const [activeTab, setActiveTab] = useState<"products" | "billing">("products");
 
   // ඔෆ්ලයින් සිදු කළ සේල්ස් ෆයර්බේස් වෙත යැවීම සහ සින්ක් කිරීම
   const syncOfflineSales = async () => {
@@ -63,13 +66,11 @@ export default function POSPage() {
       if (offlineSales.length === 0) return;
 
       for (const sale of offlineSales) {
-        // ඔෆ්ලයින් නිකුත් කළ නිවැරදි ඉන්වොයිස් අංකය (invoiceNo) සහිතවම ෆයර්බේස් වෙත යවයි
         await addDoc(collection(db, "sales"), {
           ...sale,
           createdAt: new Date(sale.createdAt),
         });
 
-        // ස්ටොක් ප්‍රමාණයන් ද ෆයර්බේස් හි යාවත්කාලීන කිරීම
         for (const item of sale.items) {
           if (item.id) {
             try {
@@ -89,7 +90,6 @@ export default function POSPage() {
       }
 
       localStorage.removeItem("pos_offline_sales");
-      console.log("Offline sales synced successfully to Firebase!");
     } catch (e) {
       console.warn("Error syncing offline sales:", e);
     }
@@ -102,20 +102,14 @@ export default function POSPage() {
         ...d.data(),
       })) as Product[];
       setProducts(items);
-    }, (err) => {
-      console.warn("Products offline mode:", err);
     });
 
     const unsubCategories = onSnapshot(collection(db, "categories"), (snapshot) => {
       setCategories(snapshot.docs.map((d) => d.data().name));
-    }, (err) => {
-      console.warn("Categories offline mode:", err);
     });
 
     const unsubBrands = onSnapshot(collection(db, "brands"), (snapshot) => {
       setBrands(snapshot.docs.map((d) => d.data().name));
-    }, (err) => {
-      console.warn("Brands offline mode:", err);
     });
 
     const unsubDrafts = onSnapshot(collection(db, "drafts"), (snapshot) => {
@@ -124,8 +118,6 @@ export default function POSPage() {
         ...(d.data() as Omit<DraftBill, "id">),
       }));
       setDrafts(draftList);
-    }, (err) => {
-      console.warn("Drafts offline mode:", err);
     });
 
     const fetchInvoiceCounter = async () => {
@@ -139,58 +131,27 @@ export default function POSPage() {
 
       try {
         await syncOfflineSales();
-
         const counterDoc = await getDoc(doc(db, "settings", "invoiceCounter"));
         if (counterDoc.exists()) {
           const serverNo = counterDoc.data().currentNo ?? 0;
-          // ඔෆ්ලයින් එකේදී වැඩි අංකයක් ගොස් තිබේ නම්, Local අංකය ප්‍රමුඛ කරයි
           const latestNo = Math.max(localNumber, serverNo);
           setCurrentInvoiceNo(latestNo);
           localStorage.setItem("pos_invoice_no", latestNo.toString());
-
-          if (localNumber > serverNo) {
-            await setDoc(doc(db, "settings", "invoiceCounter"), { currentNo: latestNo }, { merge: true });
-          }
         } else {
           await setDoc(doc(db, "settings", "invoiceCounter"), { currentNo: localNumber });
           setCurrentInvoiceNo(localNumber);
-          localStorage.setItem("pos_invoice_no", localNumber.toString());
         }
       } catch (err) {
-        console.warn("Internet නැත. LocalStorage එකෙන් ඉන්වොයිස් අංකය ලබා ගනී...");
         setCurrentInvoiceNo(localNumber);
       }
     };
     fetchInvoiceCounter();
-
-    const handleOnlineSync = async () => {
-      if (navigator.onLine) {
-        try {
-          await syncOfflineSales();
-          const localNo = localStorage.getItem("pos_invoice_no");
-          if (localNo !== null) {
-            const num = Number(localNo);
-            const counterRef = doc(db, "settings", "invoiceCounter");
-            const counterDoc = await getDoc(counterRef);
-            const serverNo = counterDoc.exists() ? (counterDoc.data().currentNo ?? 0) : 0;
-            if (num > serverNo) {
-              await setDoc(counterRef, { currentNo: num }, { merge: true });
-            }
-          }
-        } catch (e) {
-          console.warn("Online sync error:", e);
-        }
-      }
-    };
-
-    window.addEventListener("online", handleOnlineSync);
 
     return () => {
       unsubProducts();
       unsubCategories();
       unsubBrands();
       unsubDrafts();
-      window.removeEventListener("online", handleOnlineSync);
     };
   }, []);
 
@@ -256,7 +217,6 @@ export default function POSPage() {
       alert("Bill saved as Draft!");
       setDraftTitle("");
     } catch (error) {
-      console.error("Draft Save Error: ", error);
       alert("Draft saved locally / Offline mode active.");
     }
   };
@@ -266,7 +226,7 @@ export default function POSPage() {
     setDiscount(draft.discount || 0);
     setCustomerName(draft.title || "");
     setShowDraftsModal(false);
-    alert(`Draft "${draft.title}" loaded successfully!`);
+    setActiveTab("billing"); // ඩ්‍රාෆ්ට් එකක් ලෝඩ් කළ විට බිල්ින් ටැබ් එකට මාරු වේ
   };
 
   const handleDeleteDraft = async (id: string, e: React.MouseEvent) => {
@@ -287,8 +247,6 @@ export default function POSPage() {
     }
 
     const finalCustomerName = customerName.trim() ? customerName.trim() : "CASH CUSTOMER";
-    
-    // වත්මන් ඉන්වොයිස් අංකය ලබාගෙන, ඊළඟ අංකය සකස් කරයි
     const assignedInvoiceNo = currentInvoiceNo;
     const nextInvoiceNo = assignedInvoiceNo + 1;
     
@@ -296,8 +254,6 @@ export default function POSPage() {
     setCurrentInvoiceNo(nextInvoiceNo);
 
     const formattedInvoiceNo = `SAP-${assignedInvoiceNo}`;
-
-    // මුද්‍රණය කිරීම (Print)
     window.print();
 
     const saleData = {
@@ -312,7 +268,6 @@ export default function POSPage() {
       balance,
     };
 
-    // අන්තර්ජාලය ඇති නම් සෘජුවම ෆයර්බේස් වෙත යවයි, නැතහොත් ඔෆ්ලයින් කියු එකට එකතු කරයි
     if (navigator.onLine) {
       try {
         await runTransaction(db, async (transaction) => {
@@ -338,7 +293,6 @@ export default function POSPage() {
           createdAt: new Date(),
         });
       } catch (error) {
-        console.warn("Cloud sync failed, saving to offline queue.", error);
         saveToOfflineQueue(saleData);
       }
     } else {
@@ -397,37 +351,65 @@ export default function POSPage() {
     createdAt: new Date(),
   };
 
+  const totalCartCount = cart.reduce((acc, item) => acc + item.cartQty, 0);
+
   return (
-    <div className="max-w-[1300px] mx-auto p-4 sm:p-6 font-sans dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-100">
+    <div className="max-w-[1300px] mx-auto p-2 sm:p-6 font-sans dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-100 pb-20 sm:pb-6">
       
       <div id="receipt-print" className="hidden print:block">
         <ReceiptTemplate invoice={currentInvoiceData} />
       </div>
 
-      <div className="print:hidden space-y-6">
-        <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs">
+      <div className="print:hidden space-y-4">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl">
-              <ShoppingCart className="w-6 h-6" />
+            <div className="p-2.5 sm:p-3 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl">
+              <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">Point of Sale (POS Billing)</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Next Invoice No: <span className="font-bold text-blue-600 dark:text-blue-400">#SAP-{currentInvoiceNo}</span></p>
+              <h1 className="text-lg sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">POS Billing</h1>
+              <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Invoice: <span className="font-bold text-blue-600 dark:text-blue-400">#SAP-{currentInvoiceNo}</span></p>
             </div>
           </div>
           
           <button
             onClick={() => setShowDraftsModal(true)}
-            className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-4 py-2.5 rounded-xl text-xs font-bold transition hover:bg-amber-100 shadow-xs"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-4 py-2.5 rounded-xl text-xs font-bold transition hover:bg-amber-100 shadow-xs"
           >
             <FolderOpen className="w-4 h-4" />
             <span>Saved Drafts ({drafts.length})</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Mobile View Switcher (Bottom / Top Bar සඳහා දුරකථන පෙනුම වැඩිදියුණු කිරීමට) */}
+        <div className="flex lg:hidden grid-cols-2 gap-2 bg-gray-200 dark:bg-gray-800 p-1 rounded-xl">
+          <button
+            onClick={() => setActiveTab("products")}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${activeTab === "products" ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-white shadow-xs" : "text-gray-600 dark:text-gray-400"}`}
+          >
+            📦 Products ({filteredProducts.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("billing")}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 ${activeTab === "billing" ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-white shadow-xs" : "text-gray-600 dark:text-gray-400"}`}
+          >
+            🛒 Cart 
+            {totalCartCount > 0 && (
+              <span className="bg-blue-600 text-white px-1.5 py-0.5 rounded-full text-[10px]">
+                {totalCartCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          
+          {/* Products Section */}
+          <div className={`lg:col-span-2 bg-white dark:bg-gray-800 p-3 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs space-y-4 ${activeTab === "billing" ? "hidden lg:block" : "block"}`}>
+            
+            {/* Search & Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                 <input
@@ -484,7 +466,8 @@ export default function POSPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto pr-1">
+            {/* Product Grid - දුරකථන සඳහා cols-2 සහ ලොකු තිර සඳහා වැඩි ප්‍රමාණයක් */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 max-h-[calc(100vh-280px)] sm:max-h-[500px] overflow-y-auto pr-1">
               {filteredProducts.map((product) => {
                 const cartItem = cart.find((item) => item.id === product.id);
                 const currentQty = cartItem ? cartItem.cartQty : 0;
@@ -493,37 +476,37 @@ export default function POSPage() {
                   <div
                     key={product.id}
                     onClick={(e) => handleIncreaseQty(product, e)}
-                    className="p-3.5 border border-gray-100 dark:border-gray-700 rounded-2xl text-left hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/20 dark:hover:bg-blue-950/20 transition bg-gray-50/50 dark:bg-gray-700/40 flex flex-col justify-between cursor-pointer select-none"
+                    className="p-2.5 sm:p-3.5 border border-gray-100 dark:border-gray-700 rounded-2xl text-left hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/25 dark:hover:bg-blue-950/20 transition bg-gray-50/50 dark:bg-gray-700/40 flex flex-col justify-between cursor-pointer select-none"
                   >
                     <div>
                       {product.imageUrl ? (
-                        <div className="w-full h-24 mb-2.5 bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 flex items-center justify-center">
+                        <div className="w-full h-20 sm:h-24 mb-2 bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 flex items-center justify-center">
                           <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                         </div>
                       ) : (
-                        <div className="w-full h-24 mb-2.5 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-gray-400 text-[10px]">
+                        <div className="w-full h-20 sm:h-24 mb-2 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-gray-400 text-[10px]">
                           <Package className="w-6 h-6 opacity-40" />
                         </div>
                       )}
-                      <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 block">{product.partNumber || "-"}</span>
-                      <h3 className="font-bold text-gray-800 dark:text-gray-100 text-xs line-clamp-2 mt-0.5">{product.name}</h3>
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 block">{product.partNumber || "-"}</span>
+                      <h3 className="font-bold text-gray-800 dark:text-gray-100 text-[11px] sm:text-xs line-clamp-2 mt-0.5">{product.name}</h3>
                     </div>
 
-                    <div className="mt-3 flex flex-col gap-1.5">
+                    <div className="mt-2.5 sm:mt-3 flex flex-col gap-1.5">
                       <div className="flex justify-between items-center">
-                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs">LKR {(product.sellingPrice || 0).toLocaleString()}</span>
+                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-[11px] sm:text-xs">LKR {(product.sellingPrice || 0).toLocaleString()}</span>
                          
-                        <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-lg shadow-2xs" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1 rounded-lg shadow-2xs" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={(e) => handleDecreaseQty(product, e)}
-                            className="w-5 h-5 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 font-bold rounded-md flex items-center justify-center hover:bg-red-100 text-xs transition"
+                            className="w-5 h-5 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 font-bold rounded-md flex items-center justify-center text-[10px]"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
-                          <span className="text-[11px] font-bold px-1 text-gray-700 dark:text-gray-200 min-w-[16px] text-center">{currentQty}</span>
+                          <span className="text-[10px] sm:text-[11px] font-bold px-1 text-gray-700 dark:text-gray-200 min-w-[14px] text-center">{currentQty}</span>
                           <button
                             onClick={(e) => handleIncreaseQty(product, e)}
-                            className="w-5 h-5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-bold rounded-md flex items-center justify-center hover:bg-emerald-100 text-xs transition"
+                            className="w-5 h-5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-bold rounded-md flex items-center justify-center text-[10px]"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
@@ -536,13 +519,14 @@ export default function POSPage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex flex-col justify-between space-y-4">
+          {/* Cart & Billing Section */}
+          <div className={`bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex flex-col justify-between space-y-4 ${activeTab === "products" ? "hidden lg:flex" : "flex"}`}>
             
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white max-h-[350px] overflow-y-auto shadow-xs">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white max-h-[300px] sm:max-h-[350px] overflow-y-auto shadow-xs">
               <ReceiptTemplate invoice={currentInvoiceData} />
             </div>
 
-            <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3 bg-gray-50/50 dark:bg-gray-700/30 p-4 rounded-xl">
+            <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3 bg-gray-50/50 dark:bg-gray-700/30 p-3 sm:p-4 rounded-xl">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-gray-500 dark:text-gray-400 font-semibold">Customer / Vehicle:</span>
                 <input
@@ -606,9 +590,10 @@ export default function POSPage() {
         </div>
       </div>
 
+      {/* Drafts Modal */}
       {showDraftsModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl max-w-lg w-full shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl max-w-lg w-full shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
               <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
                 <FolderOpen className="w-4 h-4 text-amber-500" /> Saved Bill Drafts ({drafts.length})
@@ -630,7 +615,7 @@ export default function POSPage() {
                   return (
                     <div 
                       key={d.id} 
-                      className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center gap-3 hover:border-amber-400 transition"
+                      className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:border-amber-400 transition"
                     >
                       <div className="space-y-1">
                         <h4 className="font-bold text-xs text-gray-800 dark:text-gray-100 flex items-center gap-2">
@@ -641,7 +626,7 @@ export default function POSPage() {
                         </p>
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                         <button
                           onClick={() => handleLoadDraft(d)}
                           className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs"

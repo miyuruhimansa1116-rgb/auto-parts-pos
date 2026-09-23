@@ -24,6 +24,7 @@ import {
   ShoppingBag,
   Activity,
   Flame,
+  X,
 } from "lucide-react";
 
 interface SaleItem {
@@ -92,6 +93,7 @@ export default function DashboardPage() {
   const [endDateTime, setEndDateTime] = useState("");
   
   const [deductExpenses, setDeductExpenses] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
 
   const fetchDashboardData = async (isRefresh = false) => {
     try {
@@ -188,19 +190,32 @@ export default function DashboardPage() {
   }, []);
 
   const filteredSales = useMemo(() => {
-    const now = Date.now();
+    const now = new Date();
 
     return sales.filter((sale) => {
       const saleDate = getDate(sale.createdAt);
       if (!saleDate) return false;
       const saleTime = saleDate.getTime();
 
-      if (timeFilter === "1hour") return now - saleTime <= 60 * 60 * 1000;
-      if (timeFilter === "1day") return now - saleTime <= 24 * 60 * 60 * 1000;
+      if (timeFilter === "1hour") return now.getTime() - saleTime <= 60 * 60 * 1000;
+      
+      // Today: අද දවසේ මධ්‍යම රාත්‍රියේ සිට
+      if (timeFilter === "1day") {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        return saleTime >= startOfToday;
+      }
+
+      // Yesterday: ඊයේ දවසේ මධ්‍යම රාත්‍රියේ සිට අද දවසේ මධ්‍යම රාත්‍රිය දක්වා
+      if (timeFilter === "yesterday") {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const startOfYesterday = startOfToday - (24 * 60 * 60 * 1000);
+        return saleTime >= startOfYesterday && saleTime < startOfToday;
+      }
+
       if (timeFilter === "1week")
-        return now - saleTime <= 7 * 24 * 60 * 60 * 1000;
+        return now.getTime() - saleTime <= 7 * 24 * 60 * 60 * 1000;
       if (timeFilter === "1year")
-        return now - saleTime <= 365 * 24 * 60 * 60 * 1000;
+        return now.getTime() - saleTime <= 365 * 24 * 60 * 60 * 1000;
 
       if (timeFilter === "custom") {
         if (!startDateTime || !endDateTime) return true;
@@ -214,19 +229,32 @@ export default function DashboardPage() {
   }, [sales, timeFilter, startDateTime, endDateTime]);
 
   const filteredPurchases = useMemo(() => {
-    const now = Date.now();
+    const now = new Date();
 
     return purchases.filter((purchase) => {
       const date = getDate(purchase.createdAt);
       if (!date) return false;
       const time = date.getTime();
 
-      if (timeFilter === "1hour") return now - time <= 60 * 60 * 1000;
-      if (timeFilter === "1day") return now - time <= 24 * 60 * 60 * 1000;
+      if (timeFilter === "1hour") return now.getTime() - time <= 60 * 60 * 1000;
+      
+      // Today: අද දවසේ මධ්‍යම රාත්‍රියේ සිට
+      if (timeFilter === "1day") {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        return time >= startOfToday;
+      }
+
+      // Yesterday: ඊයේ දවසේ පරාසය
+      if (timeFilter === "yesterday") {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const startOfYesterday = startOfToday - (24 * 60 * 60 * 1000);
+        return time >= startOfYesterday && time < startOfToday;
+      }
+
       if (timeFilter === "1week")
-        return now - time <= 7 * 24 * 60 * 60 * 1000;
+        return now.getTime() - time <= 7 * 24 * 60 * 60 * 1000;
       if (timeFilter === "1year")
-        return now - time <= 365 * 24 * 60 * 60 * 1000;
+        return now.getTime() - time <= 365 * 24 * 60 * 60 * 1000;
 
       if (timeFilter === "custom") {
         if (!startDateTime || !endDateTime) return true;
@@ -239,7 +267,7 @@ export default function DashboardPage() {
     });
   }, [purchases, timeFilter, startDateTime, endDateTime]);
 
-  const { periodRevenue, periodGrossProfit, periodCostOfGoodsSold, periodPurchasesCost, periodSalesCount, totalItemsSold } =
+  const { periodRevenue, periodGrossProfit, periodCostOfGoodsSold, periodSalesCount, totalItemsSold } =
     useMemo(() => {
       let revenue = 0;
       let profit = 0;
@@ -282,24 +310,51 @@ export default function DashboardPage() {
         }
       });
 
-      let purchasesCost = 0;
-      filteredPurchases.forEach((p) => {
-        purchasesCost += Number(p.totalCost || 0);
-      });
-
       const costOfGoodsSold = revenue - profit;
 
       return {
         periodRevenue: revenue,
         periodGrossProfit: profit,
         periodCostOfGoodsSold: costOfGoodsSold,
-        periodPurchasesCost: purchasesCost,
         periodSalesCount: filteredSales.length,
         totalItemsSold: itemsCount,
       };
-    }, [filteredSales, filteredPurchases, productsMap]);
+    }, [filteredSales, productsMap]);
 
-  const periodProfit = deductExpenses ? periodGrossProfit - periodPurchasesCost : periodGrossProfit;
+  const { allTimeProfit, allTimePurchasesCost } = useMemo(() => {
+    let totalProfit = 0;
+    sales.forEach((sale) => {
+      if (Array.isArray(sale.items)) {
+        sale.items.forEach((item) => {
+          const qty = Number(item.cartQty || item.qty || item.quantity) || 1;
+          const pInfo =
+            productsMap[item.id] ||
+            productsMap[item.partNumber] ||
+            productsMap[item.name] || {
+              buyingPrice: 0,
+              sellingPrice: 0,
+            };
+
+          const sellingPrice = Number(item.sellingPrice ?? item.price ?? item.sellPrice ?? pInfo.sellingPrice ?? 0);
+          const buyingPrice = Number(item.buyingPrice ?? item.costPrice ?? item.cost ?? item.buyPrice ?? pInfo.buyingPrice ?? 0);
+
+          totalProfit += (sellingPrice - buyingPrice) * qty;
+        });
+      }
+    });
+
+    let totalPurchasesCost = 0;
+    purchases.forEach((p) => {
+      totalPurchasesCost += Number(p.totalCost || 0);
+    });
+
+    return {
+      allTimeProfit: totalProfit,
+      allTimePurchasesCost: totalPurchasesCost,
+    };
+  }, [sales, purchases, productsMap]);
+
+  const periodProfit = deductExpenses ? allTimeProfit - allTimePurchasesCost : periodGrossProfit;
 
   const topSellingItems = useMemo(() => {
     const itemMap: Record<
@@ -368,13 +423,21 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <Activity className="h-5 w-5 animate-pulse" />
+        <div className="flex flex-col items-center gap-5">
+          {/* Custom Animated Loader */}
+          <div className="relative flex items-center justify-center">
+            <div className="absolute h-20 w-20 rounded-full border-4 border-blue-500/20 border-t-blue-600 animate-spin" />
+            <div className="absolute h-14 w-14 rounded-full border-4 border-emerald-500/20 border-b-emerald-500 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/50 animate-pulse">
+              <BarChart3 className="h-5 w-5" />
+            </div>
           </div>
-          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-            Loading dashboard...
-          </p>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-sm font-extrabold tracking-wide text-slate-700 dark:text-slate-200 animate-pulse">
+              Loading Dashboard...
+            </p>
+            <p className="text-[11px] text-slate-400">Please wait while data is being prepared</p>
+          </div>
         </div>
       </main>
     );
@@ -382,7 +445,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
-      <div className="mx-auto max-w-[1450px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+      <div className="mx-auto max-w-[1450px] px-3 py-4 sm:px-6 lg:px-8 lg:py-7">
         {/* Header */}
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -398,7 +461,7 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => fetchDashboardData(true)}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -436,10 +499,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {[
                 ["1hour", "1 Hour"],
                 ["1day", "Today"],
+                ["yesterday", "Yesterday"],
                 ["1week", "7 Days"],
                 ["1year", "1 Year"],
                 ["all", "All Time"],
@@ -447,7 +511,7 @@ export default function DashboardPage() {
                 <button
                   key={value}
                   onClick={() => setTimeFilter(value)}
-                  className={`rounded-lg px-3 py-2 text-[11px] font-bold transition ${
+                  className={`rounded-lg px-2.5 py-2 text-[11px] font-bold transition ${
                     timeFilter === value
                       ? "bg-blue-600 text-white shadow-sm"
                       : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
@@ -458,7 +522,7 @@ export default function DashboardPage() {
               ))}
               <button
                 onClick={() => setTimeFilter("custom")}
-                className={`rounded-lg px-3 py-2 text-[11px] font-bold transition ${
+                className={`rounded-lg px-2.5 py-2 text-[11px] font-bold transition ${
                   timeFilter === "custom"
                     ? "bg-blue-600 text-white"
                     : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
@@ -493,8 +557,60 @@ export default function DashboardPage() {
           )}
         </section>
 
+        {/* Quick Actions */}
+        <section className="mb-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-slate-400">Quick actions</p>
+                <p className="text-[11px] text-slate-500">Common tasks at your fingertips</p>
+              </div>
+              <Activity className="h-4 w-4 text-slate-300" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              {[
+                ["/pos", ShoppingCart, "New Sale", "blue"],
+                ["/products", Package, "Products", "emerald"],
+                ["/reports", BarChart3, "Reports", "violet"],
+                ["/purchases", Truck, "Purchase Stock", "amber"],
+              ].map(([href, Icon, label, tone]) => {
+                const toneClasses: Record<string, string> = {
+                  blue: "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300",
+                  emerald:
+                    "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300",
+                  violet:
+                    "bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300",
+                  amber:
+                    "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300",
+                };
+
+                return (
+                  <Link
+                    href={href as string}
+                    key={label as string}
+                    className="group flex items-center gap-2.5 rounded-xl border border-slate-100 p-3 transition hover:border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                  >
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${toneClasses[tone as string]}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold">
+                        {label as string}
+                      </p>
+                      <ArrowRight className="mt-0.5 h-3 w-3 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* KPI Cards */}
-        <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {/* Revenue */}
           <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-start justify-between">
@@ -512,7 +628,7 @@ export default function DashboardPage() {
             <p className="mt-1 text-[10px] text-slate-400">Sales income</p>
           </div>
 
-          {/* Estimated Profit with Expense Deduction Option */}
+          {/* Estimated Profit / Net Profit Card */}
           <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between">
@@ -529,7 +645,7 @@ export default function DashboardPage() {
               </p>
               <p className="mt-1 text-[9px] text-slate-400">
                 {deductExpenses 
-                  ? `Gross (${money(periodGrossProfit)}) − Exp (${money(periodPurchasesCost)})`
+                  ? `All-Time Profit (${money(allTimeProfit)}) − Purchases (${money(allTimePurchasesCost)})`
                   : `Gross profit margin`}
               </p>
             </div>
@@ -627,8 +743,8 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Analytics + Quick Actions */}
-        <section className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-[1.6fr_1fr]">
+        {/* Sales Overview Chart */}
+        <section className="mb-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between">
               <div>
@@ -642,7 +758,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-7 flex h-44 items-end gap-2 sm:gap-4">
+            <div className="mt-7 flex h-44 items-end gap-2 sm:gap-4 overflow-x-auto pb-2">
               {salesByDay.map((day) => {
                 const height =
                   day.total === 0
@@ -652,7 +768,7 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={day.label}
-                    className="flex h-full flex-1 flex-col justify-end"
+                    className="flex h-full min-w-[36px] flex-1 flex-col justify-end"
                   >
                     <div className="mb-2 text-center text-[9px] font-bold text-slate-400">
                       {day.total > 0
@@ -674,60 +790,9 @@ export default function DashboardPage() {
               })}
             </div>
           </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-black">Quick actions</p>
-                <p className="mt-0.5 text-[11px] text-slate-400">
-                  Common tasks at your fingertips
-                </p>
-              </div>
-              <Activity className="h-4 w-4 text-slate-300" />
-            </div>
-
-            <div className="mt-5 grid grid-cols-2 gap-2.5">
-              {[
-                ["/pos", ShoppingCart, "New Sale", "blue"],
-                ["/products", Package, "Products", "emerald"],
-                ["/reports", BarChart3, "Reports", "violet"],
-                ["/purchases", Truck, "Purchase Stock", "amber"],
-              ].map(([href, Icon, label, tone]) => {
-                const toneClasses: Record<string, string> = {
-                  blue: "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300",
-                  emerald:
-                    "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300",
-                  violet:
-                    "bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300",
-                  amber:
-                    "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300",
-                };
-
-                return (
-                  <Link
-                    href={href as string}
-                    key={label as string}
-                    className="group flex items-center gap-2.5 rounded-xl border border-slate-100 p-3 transition hover:border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
-                  >
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${toneClasses[tone as string]}`}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-[11px] font-bold">
-                        {label as string}
-                      </p>
-                      <ArrowRight className="mt-1 h-3 w-3 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500" />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
         </section>
 
-        {/* Top-Selling Items & Low Stock */}
+        {/* Top-Selling Items & Low Stock (Low stock & Supplier purchases side by side as requested) */}
         <section className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
           {/* Top Selling Items */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -812,7 +877,7 @@ export default function DashboardPage() {
                 <div>
                   <h2 className="text-sm font-black">Low stock</h2>
                   <p className="text-[10px] text-slate-400">
-                    Products with 5 units or less
+                    Products with 5 units or less (Click row for details)
                   </p>
                 </div>
               </div>
@@ -852,7 +917,9 @@ export default function DashboardPage() {
                     {lowStockProducts.map((p) => (
                       <tr
                         key={p.id}
-                        className="transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                        onClick={() => setSelectedProduct(p)}
+                        className="cursor-pointer transition hover:bg-blue-50/50 dark:hover:bg-slate-800/50"
+                        title="Click to view details"
                       >
                         <td className="px-5 py-3 text-xs font-bold text-blue-600 dark:text-blue-300">
                           {p.partNumber || "-"}
@@ -879,7 +946,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Recent sales & Purchases grid */}
+        {/* Recent sales & Supplier Purchases side by side */}
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {/* Recent sales */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -936,7 +1003,6 @@ export default function DashboardPage() {
                           <Receipt className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0">
-                          {/* Display correct invoice number from database instead of Bill # */}
                           <p className="truncate text-xs font-bold">
                             {String(sale.invoiceNumber || sale.invoiceNo || sale.billNumber || sale.id)}
                           </p>
@@ -963,7 +1029,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Purchases */}
+          {/* Supplier Purchases (Placed directly next to Recent Sales / Low Stock) */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
               <div className="flex items-center gap-3">
@@ -1018,6 +1084,76 @@ export default function DashboardPage() {
             )}
           </div>
         </section>
+
+        {/* Low Stock Item Detail Modal */}
+        {selectedProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300">
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black">Low Stock Item Details</h3>
+                    <p className="text-[10px] text-slate-400">Product inventory info</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedProduct(null)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Product Name</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-0.5">{selectedProduct.name || "N/A"}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Part Number</p>
+                    <p className="text-xs font-bold text-blue-600 dark:text-blue-300 mt-0.5">{selectedProduct.partNumber || "-"}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Current Stock</p>
+                    <p className="text-xs font-black text-red-600 dark:text-red-400 mt-0.5">{selectedProduct.stockQty || 0} Units</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Selling Price</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5">{money(Number(selectedProduct.sellingPrice || 0))}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Category</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5">{selectedProduct.category || "General"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <Link
+                  href="/products"
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-700"
+                >
+                  Manage Products
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                <button
+                  onClick={() => setSelectedProduct(null)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <footer className="mt-5 flex flex-col gap-1 px-1 text-[10px] text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <span>Dashboard data is loaded directly from your Firebase records.</span>

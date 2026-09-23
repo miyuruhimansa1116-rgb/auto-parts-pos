@@ -7,3 +7,105 @@ body {
   background-color: #f1f5f9;
   color: #0f172a;
 }
+
+/* --- Animated Search Bar Styles --- */
+:root {
+  --icon-size: 50px;
+  --main-color: #e9f1f4;
+}
+
+.search {
+  position: relative;
+  display: inline-block;
+}
+.search * {
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search__wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search__field {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  color: transparent;
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0 var(--icon-size) 0 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  background-color: transparent;
+  cursor: pointer;
+  -webkit-transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
+}
+
+.search__field:focus {
+  border-color: #3b82f6;
+  width: 280px;
+  color: #1e293b;
+  background-color: #ffffff;
+  cursor: text;
+}
+
+.search__field:focus ~ .search__icon {
+  background-color: #3b82f6;
+  color: #ffffff;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.search__icon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: var(--main-color);
+  color: #475569;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  font-size: 1rem;
+  text-align: center;
+  border: none;
+  border-radius: 50%;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+/* Placeholder Styling & Animation */
+.search__field::-webkit-input-placeholder {
+  color: transparent;
+  transition: color 0.2s ease-in-out;
+}
+.search__field:focus::-webkit-input-placeholder {
+  color: #94a3b8;
+}
+
+.search__field:-moz-placeholder {
+  color: transparent;
+}
+.search__field:focus:-moz-placeholder {
+  color: #94a3b8;
+}
+
+.search__field::-moz-placeholder {
+  color: transparent;
+}
+.search__field:focus::-moz-placeholder {
+  color: #94a3b8;
+}
+
+.search__field:-ms-input-placeholder {
+  color: transparent;
+}
+.search__field:focus:-ms-input-placeholder {
+  color: #94a3b8;
+}
