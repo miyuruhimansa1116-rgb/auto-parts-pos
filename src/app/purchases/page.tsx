@@ -352,7 +352,7 @@ export default function PurchasesPage() {
     }
   };
 
-  // Handle Submit Purchase & Update Inventory Stock (Fixed Editing & Auto-fill flow)
+  // Handle Submit Purchase & Update Inventory Stock
   const handleSubmitPurchase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -464,7 +464,7 @@ export default function PurchasesPage() {
 
         alert("Purchase saved successfully and stock updated!");
         
-        // Clear transaction form fields but keep flow ready for next entry
+        // Clear transaction form fields but keep supplier, category, brand, and date for quick entry
         setEditingId(null);
         setOldQty(0);
         setPartNumber("");
@@ -490,7 +490,7 @@ export default function PurchasesPage() {
     }
   };
 
-  // Filter & Sort Logic for Purchases Table (With Latest Descending order default)
+  // Filter & Sort Logic for Purchases Table
   const filteredAndSortedPurchases = useMemo(() => {
     return purchases
       .filter((p) => {
@@ -521,7 +521,6 @@ export default function PurchasesPage() {
           return new Date(dateVal).getTime();
         };
 
-        // Latest first descending order based on creation time
         return getTime(b.createdAt) - getTime(a.createdAt);
       });
   }, [purchases, searchQuery, filterCategory, filterBrand, sortBy]);
@@ -735,6 +734,7 @@ export default function PurchasesPage() {
                 </select>
                 <button
                   type="button"
+                  tabIndex={-1}
                   onClick={() => setShowNewCatInput(!showNewCatInput)}
                   className="px-3 py-1 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900 rounded-xl text-xs font-bold hover:bg-blue-100 whitespace-nowrap flex items-center gap-1 transition"
                 >
@@ -743,6 +743,7 @@ export default function PurchasesPage() {
                 {category && (
                   <button
                     type="button"
+                    tabIndex={-1}
                     onClick={handleDeleteCategory}
                     className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
                     title="Delete selected category"
@@ -764,6 +765,7 @@ export default function PurchasesPage() {
                   />
                   <button
                     type="button"
+                    tabIndex={-1}
                     onClick={handleAddCategory}
                     className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition"
                   >
@@ -808,6 +810,7 @@ export default function PurchasesPage() {
                 </select>
                 <button
                   type="button"
+                  tabIndex={-1}
                   onClick={() => setShowNewBrandInput(!showNewBrandInput)}
                   className="px-3 py-1 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-900 rounded-xl text-xs font-bold hover:bg-purple-100 whitespace-nowrap flex items-center gap-1 transition"
                 >
@@ -816,6 +819,7 @@ export default function PurchasesPage() {
                 {brand && (
                   <button
                     type="button"
+                    tabIndex={-1}
                     onClick={handleDeleteBrand}
                     className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
                     title="Delete selected brand"
@@ -837,6 +841,7 @@ export default function PurchasesPage() {
                   />
                   <button
                     type="button"
+                    tabIndex={-1}
                     onClick={handleAddBrand}
                     className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition"
                   >
@@ -947,11 +952,12 @@ export default function PurchasesPage() {
               </div>
             </div>
 
-            {/* Favorite Checkbox in Form */}
+            {/* Favorite Checkbox in Form - tabIndex={-1} added */}
             <div className="flex items-center gap-2 pt-1 pb-1">
               <input
                 type="checkbox"
                 id="isFavorite"
+                tabIndex={-1}
                 checked={isFavorite}
                 onChange={(e) => setIsFavorite(e.target.checked)}
                 className="w-4 h-4 text-amber-600 rounded border-slate-300 dark:border-slate-700 focus:ring-amber-500 cursor-pointer"
