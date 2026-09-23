@@ -326,10 +326,6 @@ export default function PurchasesPage() {
       
       if (imageFile) {
         imageUrl = await convertAndCompressImage(imageFile);
-      } else if (!imageUrl && itemName) {
-        const searchKeyword = `${brand && brand !== "No Brand" ? brand : ""} ${itemName}`;
-        // @ts-ignore
-        imageUrl = typeof fetchAutoImage === "function" ? await fetchAutoImage(searchKeyword) : "";
       }
 
       let finalDate: Date;
@@ -466,7 +462,7 @@ export default function PurchasesPage() {
           return new Date(dateVal).getTime();
         };
 
-        return getTime(b.createdAt) - getTime(getTime(a.createdAt));
+        return getTime(b.createdAt) - getTime(a.createdAt);
       });
   }, [purchases, searchQuery, filterCategory, filterBrand, sortBy]);
 
@@ -859,7 +855,7 @@ export default function PurchasesPage() {
 
               <div>
                 <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1 flex items-center gap-1.5">
-                  <ImageIcon className="w-3.5 h-3.5 text-blue-500" /> Product Photo {editingId ? "(Optional)" : "(Optional)"}
+                  <ImageIcon className="w-3.5 h-3.5 text-blue-500" /> Product Photo (Optional)
                 </label>
                 <input
                   type="file"
