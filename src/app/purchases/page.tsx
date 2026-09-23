@@ -900,7 +900,6 @@ export default function PurchasesPage() {
               </div>
             </div>
 
-            {/* Favorite Checkbox - now accessible via Tab and Arrow keys */}
             <div className="flex items-center gap-2 pt-1 pb-1">
               <input
                 type="checkbox"
