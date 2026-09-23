@@ -14,7 +14,9 @@ import {
   FileSpreadsheet, 
   UserPlus, 
   Settings,
-  LogOut
+  LogOut,
+  Menu,
+  X
 } from "lucide-react";
 
 const navLinks = [
@@ -22,7 +24,7 @@ const navLinks = [
   { href: "/pos", label: "POS (Billing)", icon: ShoppingCart },
   { href: "/products", label: "Products & Stock", icon: Package },
   { href: "/purchases", label: "Purchases", icon: Truck },
-  { href: "/suppliers", label: "Suppliers", icon: Building2 }, // Admin ට පමණි
+  { href: "/suppliers", label: "Suppliers", icon: Building2 },
   { href: "/reports", label: "Sales Reports", icon: BarChart3 },
   { href: "/reports/purchases", label: "Purchase Reports", icon: FileSpreadsheet },
   { href: "/admin/users", label: "Create Users", icon: UserPlus },
@@ -35,6 +37,7 @@ export default function Sidebar() {
   const [userRole, setUserRole] = useState("counter");
   const [username, setUsername] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // දුරකථන සඳහා මෙනු එක පෙන්වීමට/සඟවීමට
 
   useEffect(() => {
     setMounted(true);
@@ -43,6 +46,11 @@ export default function Sidebar() {
     setUserRole(role);
     setUsername(user);
   }, []);
+
+  // පිටුව මාරු වන විට දුරකථනයේ මෙනු එක ස්වයංක්‍රීයව වැසී යාමට
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
 
   const handleLogout = () => {
     if (confirm("සැබැවින්ම පද්ධතියෙන් ඉවත් වීමට (Logout) අවශ්‍ය බව තහවුරු කරන්නද?")) {
@@ -63,18 +71,27 @@ export default function Sidebar() {
     return null;
   }
 
-  return (
-    <aside className="w-64 bg-white/90 dark:bg-gray-900/95 backdrop-blur-md text-gray-800 dark:text-gray-100 flex flex-col hidden sm:flex shadow-lg min-h-screen border-r border-gray-200/80 dark:border-gray-800 transition-colors duration-200">
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
       {/* Header & Logo Section */}
       <div className="p-5 border-b border-gray-100 dark:border-gray-800/80 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/20">
-            S
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/20">
+              S
+            </div>
+            <div>
+              <h1 className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">Sampath Auto Parts</h1>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">POS & Inventory System</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">Sampath Auto Parts</h1>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">POS & Inventory System</p>
-          </div>
+          {/* Mobile Close Button */}
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="sm:hidden p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* User Info Badge */}
@@ -131,6 +148,47 @@ export default function Sidebar() {
           Battuluoya System v1.0
         </div>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile Top Navigation Bar */}
+      <div className="sm:hidden flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+            S
+          </div>
+          <span className="font-bold text-sm text-gray-900 dark:text-white">Sampath Auto Parts</span>
+        </div>
+        <button
+          onClick={() => setIsOpen(true)}
+          className="p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
+          aria-label="Open Menu"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Mobile Drawer Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 sm:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sliding Sidebar */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-300 ease-in-out sm:hidden ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      }`}>
+        <SidebarContent />
+      </div>
+
+      {/* Desktop Sidebar (Laptop එකේදී පෙනෙන ස්ථිර සයිඩ්බාර් එක) */}
+      <aside className="w-64 bg-white/90 dark:bg-gray-900/95 backdrop-blur-md text-gray-800 dark:text-gray-100 flex-col hidden sm:flex shadow-lg min-h-screen border-r border-gray-200/80 dark:border-gray-800 transition-colors duration-200">
+        <SidebarContent />
+      </aside>
+    </>
   );
 }
