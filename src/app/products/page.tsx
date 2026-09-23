@@ -55,6 +55,10 @@ export default function InventoryPage() {
   const [currentImageUrl, setCurrentImageUrl] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // View Details Modal State
+  const [viewProduct, setViewProduct] = useState<any | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
   // Filter & Search & Sort States
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
@@ -169,7 +173,8 @@ export default function InventoryPage() {
   };
 
   // Direct Toggle Favorite from Table
-  const toggleFavorite = async (id: string, currentStatus: boolean) => {
+  const toggleFavorite = async (id: string, currentStatus: boolean, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click event from triggering
     try {
       await updateDoc(doc(db, "products", id), {
         isFavorite: !currentStatus,
@@ -206,7 +211,8 @@ export default function InventoryPage() {
   };
 
   // Edit Click
-  const handleEditClick = (p: Product & { isFavorite?: boolean; supplier?: string; costPrice?: number; stockQty?: number; entryDate?: string }) => {
+  const handleEditClick = (p: Product & { isFavorite?: boolean; supplier?: string; costPrice?: number; stockQty?: number; entryDate?: string }, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click event from triggering
     setEditingId(p.id || null);
     setPartNumber(p.partNumber || "");
     setName(p.name || "");
@@ -275,11 +281,18 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click event from triggering
     if (confirm("Are you sure you want to delete this item?")) {
       await deleteDoc(doc(db, "products", id));
       if (editingId === id) resetForm();
     }
+  };
+
+  // Handle Row Click to View Full Details
+  const handleRowClick = (product: any) => {
+    setViewProduct(product);
+    setIsViewModalOpen(true);
   };
 
   // Filtering and Sorting Logic
@@ -416,7 +429,9 @@ export default function InventoryPage() {
                   return (
                     <tr
                       key={p.id}
-                      className="transition hover:bg-gray-50/80 dark:hover:bg-gray-700/50"
+                      onClick={() => handleRowClick(p)}
+                      className="transition hover:bg-blue-50/40 dark:hover:bg-gray-700/50 cursor-pointer"
+                      title="Click to view full details"
                     >
                       <td className="p-3">
                         {p.imageUrl ? (
@@ -438,7 +453,7 @@ export default function InventoryPage() {
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => toggleFavorite(p.id, p.isFavorite)}
+                            onClick={(e) => toggleFavorite(p.id, p.isFavorite, e)}
                             className="text-base hover:scale-110 transition cursor-pointer focus:outline-none"
                             title="Click to toggle favorite"
                           >
@@ -458,15 +473,15 @@ export default function InventoryPage() {
                       <td className="p-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
                         Rs. {p.sellingPrice ? p.sellingPrice.toLocaleString() : "0"}
                       </td>
-                      <td className="p-3 text-center space-x-3 whitespace-nowrap">
+                      <td className="p-3 text-center space-x-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => handleEditClick(p)}
+                          onClick={(e) => handleEditClick(p, e)}
                           className="text-amber-600 dark:text-amber-400 hover:text-amber-700 font-semibold transition"
                         >
                           Edit
                         </button>
                         <button
-                          onClick={() => p.id && handleDelete(p.id)}
+                          onClick={(e) => p.id && handleDelete(p.id, e)}
                           className="text-rose-600 dark:text-rose-400 hover:text-rose-700 font-semibold transition"
                         >
                           Delete
@@ -480,6 +495,95 @@ export default function InventoryPage() {
           </table>
         </div>
       </div>
+
+      {/* View Full Details Modal */}
+      {isViewModalOpen && viewProduct && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="font-semibold text-base text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <span>🔍 Product Details</span>
+                {viewProduct.isFavorite && <span className="text-xs">⭐</span>}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsViewModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Product Image Preview */}
+            <div className="flex justify-center my-2">
+              {viewProduct.imageUrl ? (
+                <img
+                  src={viewProduct.imageUrl}
+                  alt={viewProduct.name}
+                  className="w-32 h-32 object-cover rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm"
+                />
+              ) : (
+                <div className="w-32 h-32 bg-gray-100 dark:bg-gray-700 rounded-2xl border border-gray-200 dark:border-gray-600 flex items-center justify-center text-xs text-gray-400 font-medium">
+                  No Image Available
+                </div>
+              )}
+            </div>
+
+            {/* Details Grid */}
+            <div className="bg-gray-50/60 dark:bg-gray-700/50 p-4 rounded-xl space-y-3 text-xs">
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Product Name:</span>
+                <span className="font-bold text-gray-900 dark:text-white text-right">{viewProduct.name}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Part Number:</span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{viewProduct.partNumber}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Category:</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">{viewProduct.category || "General"}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Brand:</span>
+                <span className="font-semibold text-purple-700 dark:text-purple-300">{viewProduct.brand || "Generic"}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Supplier:</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">{viewProduct.supplier || "General Supplier"}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Cost Price:</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">Rs. {viewProduct.costPrice ? viewProduct.costPrice.toLocaleString() : "0"}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Selling Price:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">Rs. {viewProduct.sellingPrice ? viewProduct.sellingPrice.toLocaleString() : "0"}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Stock Quantity:</span>
+                <span className={`font-bold ${Number(viewProduct.stockQty) > 0 ? 'text-blue-600' : 'text-rose-500'}`}>
+                  {viewProduct.stockQty || 0} Units
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Entry Date:</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">{viewProduct.entryDate || "N/A"}</span>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsViewModalOpen(false)}
+                className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal / Popup for Add/Edit Form */}
       {isModalOpen && (
