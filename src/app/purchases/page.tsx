@@ -82,8 +82,6 @@ export default function PurchasesPage() {
   const [newCatName, setNewCatName] = useState("");
 
   const [brand, setBrand] = useState("");
-  const [showNewBrandInput, setShowNewBrandInput] = useState(false);
-  const [newBrandName, setNewBrandName] = useState("");
 
   const [qty, setQty] = useState<number | "">("");
   const [costPrice, setCostPrice] = useState<number | "">("");
@@ -219,38 +217,6 @@ export default function PurchasesPage() {
     }
   };
 
-  const handleAddBrand = async () => {
-    if (!newBrandName.trim()) return;
-    try {
-      await addDoc(collection(db, "brands"), {
-        name: newBrandName.trim(),
-        createdAt: new Date(),
-      });
-      setBrand(newBrandName.trim());
-      setNewBrandName("");
-      setShowNewBrandInput(false);
-    } catch (err) {
-      console.error("Add Brand Error:", err);
-    }
-  };
-
-  const handleDeleteBrand = async () => {
-    if (!brand) return;
-    if (confirm(`Are you sure you want to delete the brand "${brand}"?`)) {
-      try {
-        const brandObj = brands.find((b) => b.name === brand);
-        if (brandObj && brandObj.id) {
-          await deleteDoc(doc(db, "brands", brandObj.id));
-          setBrand("");
-          alert("Brand deleted successfully!");
-        }
-      } catch (err) {
-        console.error("Delete Brand Error:", err);
-        alert("Error deleting brand.");
-      }
-    }
-  };
-
   const resetForm = () => {
     setEditingId(null);
     setOldQty(0);
@@ -266,7 +232,6 @@ export default function PurchasesPage() {
     setImageFile(null);
     setCurrentImageUrl("");
     setShowNewCatInput(false);
-    setShowNewBrandInput(false);
     setPurchaseDate(getTodayDateStr());
   };
 
@@ -745,74 +710,32 @@ export default function PurchasesPage() {
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
                 <Tag className="w-3.5 h-3.5 text-purple-500" /> Brand (If blank, saved as No Brand)
               </label>
-              <div className="flex gap-2">
-                <select
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const formElements = e.currentTarget.form?.elements;
-                      if (formElements) {
-                        for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 3]) {
-                            (formElements[i + 3] as HTMLElement).focus();
-                            break;
-                          }
+              <select
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
                         }
                       }
                     }
-                  }}
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                >
-                  <option value="">-- No Brand / Select Brand --</option>
-                  {brands.map((b) => (
-                    <option key={b.id} value={b.name}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowNewBrandInput(!showNewBrandInput)}
-                  className="px-3 py-1 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-900 rounded-xl text-xs font-bold hover:bg-purple-100 whitespace-nowrap flex items-center gap-1 transition"
-                >
-                  <Plus className="w-3 h-3" /> New
-                </button>
-                {brand && (
-                  <button
-                    type="button"
-                    onClick={handleDeleteBrand}
-                    className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
-                  >
-                    <Trash2 className="w-3 h-3" /> Remove
-                  </button>
-                )}
-              </div>
-              {showNewBrandInput && (
-                <div className="flex gap-2 mt-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <input
-                    type="text"
-                    value={newBrandName}
-                    onChange={(e) => setNewBrandName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddBrand();
-                      }
-                    }}
-                    placeholder="New Brand"
-                    className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddBrand}
-                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition"
-                  >
-                    <Check className="w-3 h-3" /> Save
-                  </button>
-                </div>
-              )}
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+              >
+                <option value="">-- No Brand / Select Brand --</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.name}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
