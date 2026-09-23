@@ -241,7 +241,7 @@ export default function PurchasesPage() {
     }
   };
 
-  // Reset Form
+  // Reset Form (මෙය දැන් සාර්ථක Purchase එකකින් පසු සම්පූර්ණයෙන්ම Clear කිරීම සඳහා පමණක් භාවිතා වේ)
   const resetForm = () => {
     setEditingId(null);
     setOldQty(0);
@@ -402,6 +402,7 @@ export default function PurchasesPage() {
         }
 
         alert("Purchase record updated successfully!");
+        resetForm(); // Edit කළ පසු Form එක Clear වේ
       } else {
         await addDoc(collection(db, "purchases"), purchaseData);
 
@@ -439,9 +440,17 @@ export default function PurchasesPage() {
         }
 
         alert("Purchase saved successfully and stock updated!");
+        
+        // **නව ඉල්ලීම:** අලුතින් Purchase එකක් කළ විට input කර තිබූ දත්ත මකී යෑම වළක්වා ඇත (සමහර දත්ත එලෙසම තබා ගැනීමට අවශ්‍ය නම් මෙහි resetForm ඉවත් කර ඇත). 
+        // ඔබට අවශ්‍ය නම් මෙහිදී supplierName හෝ අනෙකුත් දත්ත එලෙසම තබාගත හැක. සම්පූර්ණයෙන්ම clear වීම අවශ්‍ය නැත.
+        setEditingId(null);
+        setOldQty(0);
+        // අවශ්‍ය නම් තවදුරටත් අලුත් අයිතම එකතු කිරීමට පහසුවීම සඳහා Qty, Part Number සහ Item Name පමණක් හිස් කර, අනෙක්වා එලෙසම තැබිය හැක:
+        setPartNumber("");
+        setItemName("");
+        setQty("");
       }
 
-      resetForm();
     } catch (error) {
       console.error("Purchase Error: ", error);
       alert("An error occurred!");
@@ -572,6 +581,7 @@ export default function PurchasesPage() {
                   placeholder="e.g. H4-BULB"
                   value={partNumber}
                   onChange={(e) => setPartNumber(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                   required
                 />
@@ -585,6 +595,7 @@ export default function PurchasesPage() {
                   placeholder="e.g. LED Headlight"
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                   required
                 />
@@ -632,6 +643,7 @@ export default function PurchasesPage() {
                     type="text"
                     value={newCatName}
                     onChange={(e) => setNewCatName(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     placeholder="New Category"
                     className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
                   />
@@ -687,6 +699,7 @@ export default function PurchasesPage() {
                     type="text"
                     value={newBrandName}
                     onChange={(e) => setNewBrandName(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     placeholder="New Brand"
                     className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
                   />
@@ -712,6 +725,7 @@ export default function PurchasesPage() {
                 onChange={(e) =>
                   setQty(e.target.value === "" ? "" : Number(e.target.value))
                 }
+                onFocus={(e) => e.target.select()}
                 className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                 required
               />
@@ -731,6 +745,7 @@ export default function PurchasesPage() {
                       e.target.value === "" ? "" : Number(e.target.value)
                     )
                   }
+                  onFocus={(e) => e.target.select()}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                   required
                 />
@@ -748,6 +763,7 @@ export default function PurchasesPage() {
                       e.target.value === "" ? "" : Number(e.target.value)
                     )
                   }
+                  onFocus={(e) => e.target.select()}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                   required
                 />
@@ -833,6 +849,7 @@ export default function PurchasesPage() {
                     placeholder="Search name, part #..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     className="p-2 pl-8 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 w-full transition"
                   />
                 </div>
@@ -974,7 +991,7 @@ export default function PurchasesPage() {
                           </td>
                           <td className="p-3 text-center space-x-3 whitespace-nowrap">
                             <button
-                              onClick={() => handleEditClick(p)}
+                              onClick={() => handleEditClick(p), (e: any) => e.target.select?.()}
                               className="text-amber-600 dark:text-amber-400 hover:underline font-bold inline-flex items-center gap-1 transition"
                             >
                               <Edit3 className="w-3.5 h-3.5" /> Edit
