@@ -681,7 +681,6 @@ export default function PurchasesPage() {
                       const formElements = e.currentTarget.form?.elements;
                       if (formElements) {
                         for (let i = 0; i < formElements.length; i++) {
-                          // Jump past the New/Remove buttons directly to the next input field
                           if (formElements[i] === e.currentTarget && formElements[i + 3]) {
                             (formElements[i + 3] as HTMLElement).focus();
                             break;
@@ -701,7 +700,6 @@ export default function PurchasesPage() {
                 </select>
                 <button
                   type="button"
-                  tabIndex={-1}
                   onClick={() => setShowNewCatInput(!showNewCatInput)}
                   className="px-3 py-1 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900 rounded-xl text-xs font-bold hover:bg-blue-100 whitespace-nowrap flex items-center gap-1 transition"
                 >
@@ -710,7 +708,6 @@ export default function PurchasesPage() {
                 {category && (
                   <button
                     type="button"
-                    tabIndex={-1}
                     onClick={handleDeleteCategory}
                     className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
                   >
@@ -735,7 +732,6 @@ export default function PurchasesPage() {
                   />
                   <button
                     type="button"
-                    tabIndex={-1}
                     onClick={handleAddCategory}
                     className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition"
                   >
@@ -759,7 +755,6 @@ export default function PurchasesPage() {
                       const formElements = e.currentTarget.form?.elements;
                       if (formElements) {
                         for (let i = 0; i < formElements.length; i++) {
-                          // Jump past the New/Remove buttons directly to the next input field
                           if (formElements[i] === e.currentTarget && formElements[i + 3]) {
                             (formElements[i + 3] as HTMLElement).focus();
                             break;
@@ -779,7 +774,6 @@ export default function PurchasesPage() {
                 </select>
                 <button
                   type="button"
-                  tabIndex={-1}
                   onClick={() => setShowNewBrandInput(!showNewBrandInput)}
                   className="px-3 py-1 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-900 rounded-xl text-xs font-bold hover:bg-purple-100 whitespace-nowrap flex items-center gap-1 transition"
                 >
@@ -788,7 +782,6 @@ export default function PurchasesPage() {
                 {brand && (
                   <button
                     type="button"
-                    tabIndex={-1}
                     onClick={handleDeleteBrand}
                     className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold hover:bg-rose-100 whitespace-nowrap flex items-center gap-1 transition"
                   >
@@ -813,7 +806,6 @@ export default function PurchasesPage() {
                   />
                   <button
                     type="button"
-                    tabIndex={-1}
                     onClick={handleAddBrand}
                     className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition"
                   >
@@ -894,9 +886,8 @@ export default function PurchasesPage() {
                       const formElements = e.currentTarget.form?.elements;
                       if (formElements) {
                         for (let i = 0; i < formElements.length; i++) {
-                          // Jump past the favorite checkbox so Enter on selling price goes directly to submit button
-                          if (formElements[i] === e.currentTarget && formElements[i + 2]) {
-                            (formElements[i + 2] as HTMLElement).focus();
+                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                            (formElements[i + 1] as HTMLElement).focus();
                             break;
                           }
                         }
@@ -909,14 +900,27 @@ export default function PurchasesPage() {
               </div>
             </div>
 
-            {/* Favorite Checkbox - tabIndex={-1} added to prevent Enter from targeting it during form filling */}
+            {/* Favorite Checkbox - now accessible via Tab and Arrow keys */}
             <div className="flex items-center gap-2 pt-1 pb-1">
               <input
                 type="checkbox"
                 id="isFavorite"
-                tabIndex={-1}
                 checked={isFavorite}
                 onChange={(e) => setIsFavorite(e.target.checked)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const formElements = e.currentTarget.form?.elements;
+                    if (formElements) {
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i] === e.currentTarget && formElements[i + 1]) {
+                          (formElements[i + 1] as HTMLElement).focus();
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }}
                 className="w-4 h-4 text-amber-600 rounded border-slate-300 dark:border-slate-700 focus:ring-amber-500 cursor-pointer"
               />
               <label htmlFor="isFavorite" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
