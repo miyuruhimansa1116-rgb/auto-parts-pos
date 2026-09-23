@@ -475,10 +475,9 @@ export default function PurchasesPage() {
         setImageFile(null);
         setCurrentImageUrl("");
         
-        // Focus back to supplier select box and select it for keyboard/flow continuation
+        // Focus back to supplier select box safely
         if (supplierSelectRef.current) {
           supplierSelectRef.current.focus();
-          supplierSelectRef.current.select();
         }
       }
 
@@ -582,7 +581,6 @@ export default function PurchasesPage() {
                 ref={supplierSelectRef}
                 value={selectedSupplier}
                 onChange={(e) => setSelectedSupplier(e.target.value)}
-                onFocus={(e) => e.target.select()}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -707,7 +705,6 @@ export default function PurchasesPage() {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  onFocus={(e) => e.target.select()}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -759,6 +756,12 @@ export default function PurchasesPage() {
                     value={newCatName}
                     onChange={(e) => setNewCatName(e.target.value)}
                     onFocus={(e) => e.target.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddCategory();
+                      }
+                    }}
                     placeholder="New Category"
                     className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
                     autoComplete="off"
@@ -783,7 +786,6 @@ export default function PurchasesPage() {
                 <select
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
-                  onFocus={(e) => e.target.select()}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -835,6 +837,12 @@ export default function PurchasesPage() {
                     value={newBrandName}
                     onChange={(e) => setNewBrandName(e.target.value)}
                     onFocus={(e) => e.target.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddBrand();
+                      }
+                    }}
                     placeholder="New Brand"
                     className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
                     autoComplete="off"
@@ -1041,7 +1049,6 @@ export default function PurchasesPage() {
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
-                  onFocus={(e) => e.target.select()}
                   className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
                 >
                   <option value="all">All Categories</option>
@@ -1055,7 +1062,6 @@ export default function PurchasesPage() {
                 <select
                   value={filterBrand}
                   onChange={(e) => setFilterBrand(e.target.value)}
-                  onFocus={(e) => e.target.select()}
                   className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
                 >
                   <option value="all">All Brands</option>
@@ -1071,7 +1077,6 @@ export default function PurchasesPage() {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    onFocus={(e) => e.target.select()}
                     className="p-2 pl-7 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
                   >
                     <option value="latest">Sort: Latest (Default)</option>
