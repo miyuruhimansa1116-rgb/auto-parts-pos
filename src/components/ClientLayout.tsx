@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import Link from "next/link";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -36,7 +35,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   }, [pathname, useRouterInstance]);
 
-  // Login පිටුවේදී Sidebar සහ Header නොපෙන්වා සෘජුවම පෙන්වීම
+  // Login පිටුවේදී Sidebar නොපෙන්වා සෘජුවම පෙන්වීම
   if (pathname === "/login") {
     return <>{children}</>;
   }
@@ -47,24 +46,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-      {/* Active Status සහිත Sidebar Component එක */}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex flex-col sm:flex-row">
+      {/* Sidebar Component එක (මိုබයිල් සහ ඩෙස්ක්ටොප් දෙකම මෙහි පාලනය වේ) */}
       <Sidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-y-auto">
-        {/* Mobile Top Navigation Header */}
-        <header className="bg-white dark:bg-gray-900 border-b dark:border-gray-800 p-4 flex sm:hidden justify-between items-center shadow-xs">
-          <span className="font-bold text-blue-600 dark:text-blue-400">⚡ Auto Electrical</span>
-          <div className="flex gap-3 text-xs font-semibold">
-            <Link href="/" className="text-gray-700 dark:text-gray-300">Home</Link>
-            <Link href="/pos" className="text-blue-600 dark:text-blue-400">POS</Link>
-            <Link href="/products" className="text-gray-700 dark:text-gray-300">Products</Link>
-            <Link href="/reports" className="text-gray-700 dark:text-gray-300">Reports</Link>
-          </div>
-        </header>
-
-        <main className="flex-1 p-6">
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6">
           {children}
         </main>
       </div>
