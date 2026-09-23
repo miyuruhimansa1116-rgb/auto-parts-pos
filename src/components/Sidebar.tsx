@@ -85,19 +85,20 @@ export default function Sidebar() {
               <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">POS & Inventory System</p>
             </div>
           </div>
-          {/* Mobile Close Button */}
+          {/* Mobile Close Button (ඉහළ දකුණු කෙළවරට සකසා ඇත) */}
           <button 
             onClick={() => setIsOpen(false)}
-            className="sm:hidden p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            className="sm:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
+            aria-label="Close Menu"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* User Info Badge */}
         {username && (
           <div className="bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-xl flex items-center justify-between text-xs border border-gray-200/60 dark:border-gray-700/50">
-            <span className="text-gray-600 dark:text-gray-300 truncate max-w-[110px]">
+            <span className="text-gray-600 dark:text-gray-300 truncate max-w-[150px]">
               User: <strong className="text-blue-600 dark:text-blue-400 font-semibold">{username}</strong>
             </span>
             <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase shadow-xs ${
@@ -121,13 +122,13 @@ export default function Sidebar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 ${
+              className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all duration-200 ${
                 isActive
                   ? "bg-blue-600 text-white font-semibold shadow-sm shadow-blue-500/30"
                   : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-gray-200"
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-gray-400 dark:text-gray-500"}`} />
+              <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-400 dark:text-gray-500"}`} />
               <span>{link.label}</span>
             </Link>
           );
@@ -138,7 +139,7 @@ export default function Sidebar() {
       <div className="p-4 border-t border-gray-100 dark:border-gray-800/80 space-y-3">
         <button
           onClick={handleLogout}
-          className="w-full py-2.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white rounded-xl text-xs font-semibold transition-all duration-200 border border-red-200 dark:border-red-500/20 flex items-center justify-center gap-2 shadow-xs"
+          className="w-full py-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white rounded-xl text-xs font-semibold transition-all duration-200 border border-red-200 dark:border-red-500/20 flex items-center justify-center gap-2 shadow-xs"
         >
           <LogOut className="w-4 h-4" />
           <span>Logout</span>
@@ -170,22 +171,14 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Mobile Drawer Overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 sm:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Mobile Sliding Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-300 ease-in-out sm:hidden ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
+      {/* Mobile Fullscreen Sliding Menu (w-full මඟින් මුළු තිරයම ආවරණය කරයි) */}
+      <div className={`fixed inset-0 z-50 bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-300 ease-in-out sm:hidden ${
+        isOpen ? "translate-x-0" : "translate-x-full"
       }`}>
         <SidebarContent />
       </div>
 
-      {/* Desktop Sidebar (Laptop එකේදී පෙනෙන ස්ථිර සයිඩ්බාර් එක) */}
+      {/* Desktop Sidebar (Laptop එකේදී පෙනෙන සාමාන්‍ය සයිඩ්බාර් එක) */}
       <aside className="w-64 bg-white/90 dark:bg-gray-900/95 backdrop-blur-md text-gray-800 dark:text-gray-100 flex-col hidden sm:flex shadow-lg min-h-screen border-r border-gray-200/80 dark:border-gray-800 transition-colors duration-200">
         <SidebarContent />
       </aside>
