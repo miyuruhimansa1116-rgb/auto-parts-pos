@@ -1,4 +1,4 @@
-// src/app/inventory/page.tsx
+// src/app/products/page.tsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -32,7 +32,7 @@ interface ItemOption {
   name: string;
 }
 
-export default function InventoryPage() {
+export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [partNumber, setPartNumber] = useState("");
   const [name, setName] = useState("");
@@ -69,7 +69,6 @@ export default function InventoryPage() {
   const [currentImageUrl, setCurrentImageUrl] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-<<<<<<< HEAD
   // Stock Update Quick Modal States
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState("");
@@ -81,8 +80,6 @@ export default function InventoryPage() {
   const [stockFilterBrand, setStockFilterBrand] = useState("all");
   const [isStockDropdownOpen, setIsStockDropdownOpen] = useState(false);
 
-=======
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
   // View Details Modal State
   const [viewProduct, setViewProduct] = useState<any | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -202,11 +199,7 @@ export default function InventoryPage() {
 
   // Direct Toggle Favorite from Table
   const toggleFavorite = async (id: string, currentStatus: boolean, e: React.MouseEvent) => {
-<<<<<<< HEAD
     e.stopPropagation();
-=======
-    e.stopPropagation(); // Prevent row click event from triggering
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
     try {
       await updateDoc(doc(db, "products", id), {
         isFavorite: !currentStatus,
@@ -238,11 +231,7 @@ export default function InventoryPage() {
 
   // Edit Click
   const handleEditClick = (p: Product & { isFavorite?: boolean; supplier?: string; costPrice?: number; stockQty?: number; entryDate?: string }, e: React.MouseEvent) => {
-<<<<<<< HEAD
     e.stopPropagation();
-=======
-    e.stopPropagation(); // Prevent row click event from triggering
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
     setEditingId(p.id || null);
     setPartNumber(p.partNumber || "");
     setName(p.name || "");
@@ -311,7 +300,6 @@ export default function InventoryPage() {
     }
   };
 
-<<<<<<< HEAD
   // Handle Quick Stock Update Submission
   const handleStockUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -348,10 +336,6 @@ export default function InventoryPage() {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-=======
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click event from triggering
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
     if (confirm("Are you sure you want to delete this item?")) {
       await deleteDoc(doc(db, "products", id));
       if (editingId === id) resetForm();
@@ -364,7 +348,6 @@ export default function InventoryPage() {
     setIsViewModalOpen(true);
   };
 
-<<<<<<< HEAD
   // Sorted & Filtered Products for Stock Update Dropdown (A to Z by Name)
   const sortedStockProducts = useMemo(() => {
     return [...products]
@@ -391,9 +374,6 @@ export default function InventoryPage() {
   }, [products, selectedProductId]);
 
   // Filtering and Sorting Logic for Main Table
-=======
-  // Filtering and Sorting Logic
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
   const filteredAndSortedProducts = useMemo(() => {
     return products
       .filter((p: any) => {
@@ -432,10 +412,10 @@ export default function InventoryPage() {
       <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
           <Package className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" /> 
-          <span>Inventory Management</span>
+          <span>Products Management</span>
         </h1>
         
-        {/* Action Buttons: Responsive full-width on mobile */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => {
@@ -472,7 +452,7 @@ export default function InventoryPage() {
             Product List <span className="text-xs text-gray-400 dark:text-gray-500 font-normal">({filteredAndSortedProducts.length})</span>
           </h2>
 
-          {/* Search, Filter & Sort Controls: Fully responsive grid/flex */}
+          {/* Search, Filter & Sort Controls */}
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full lg:w-auto items-center">
             
             {/* Search Bar */}
@@ -593,11 +573,7 @@ export default function InventoryPage() {
                           <button
                             type="button"
                             onClick={(e) => toggleFavorite(p.id, p.isFavorite, e)}
-<<<<<<< HEAD
-                            className="hover:scale-110 transition cursor-pointer focus:outline-none"
-=======
                             className="text-base hover:scale-110 transition cursor-pointer focus:outline-none"
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
                             title="Click to toggle favorite"
                           >
                             <Star
@@ -622,21 +598,13 @@ export default function InventoryPage() {
                       <td className="p-3 text-center space-x-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={(e) => handleEditClick(p, e)}
-<<<<<<< HEAD
                           className="text-amber-600 dark:text-amber-400 hover:text-amber-700 font-semibold transition inline-flex items-center gap-1"
-=======
-                          className="text-amber-600 dark:text-amber-400 hover:text-amber-700 font-semibold transition"
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
                         >
                           <Edit className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={(e) => p.id && handleDelete(p.id, e)}
-<<<<<<< HEAD
                           className="text-rose-600 dark:text-rose-400 hover:text-rose-700 font-semibold transition inline-flex items-center gap-1"
-=======
-                          className="text-rose-600 dark:text-rose-400 hover:text-rose-700 font-semibold transition"
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -650,106 +618,10 @@ export default function InventoryPage() {
         </div>
       </div>
 
-<<<<<<< HEAD
       {/* Quick Stock Update Modal */}
       {isStockModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xl w-full max-w-md space-y-4 my-auto">
-=======
-      {/* View Full Details Modal */}
-      {isViewModalOpen && viewProduct && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="font-semibold text-base text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                <span>🔍 Product Details</span>
-                {viewProduct.isFavorite && <span className="text-xs">⭐</span>}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setIsViewModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Product Image Preview */}
-            <div className="flex justify-center my-2">
-              {viewProduct.imageUrl ? (
-                <img
-                  src={viewProduct.imageUrl}
-                  alt={viewProduct.name}
-                  className="w-32 h-32 object-cover rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm"
-                />
-              ) : (
-                <div className="w-32 h-32 bg-gray-100 dark:bg-gray-700 rounded-2xl border border-gray-200 dark:border-gray-600 flex items-center justify-center text-xs text-gray-400 font-medium">
-                  No Image Available
-                </div>
-              )}
-            </div>
-
-            {/* Details Grid */}
-            <div className="bg-gray-50/60 dark:bg-gray-700/50 p-4 rounded-xl space-y-3 text-xs">
-              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Product Name:</span>
-                <span className="font-bold text-gray-900 dark:text-white text-right">{viewProduct.name}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Part Number:</span>
-                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{viewProduct.partNumber}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Category:</span>
-                <span className="font-semibold text-gray-800 dark:text-gray-200">{viewProduct.category || "General"}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Brand:</span>
-                <span className="font-semibold text-purple-700 dark:text-purple-300">{viewProduct.brand || "Generic"}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Supplier:</span>
-                <span className="font-semibold text-gray-800 dark:text-gray-200">{viewProduct.supplier || "General Supplier"}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Cost Price:</span>
-                <span className="font-semibold text-gray-800 dark:text-gray-200">Rs. {viewProduct.costPrice ? viewProduct.costPrice.toLocaleString() : "0"}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Selling Price:</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">Rs. {viewProduct.sellingPrice ? viewProduct.sellingPrice.toLocaleString() : "0"}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Stock Quantity:</span>
-                <span className={`font-bold ${Number(viewProduct.stockQty) > 0 ? 'text-blue-600' : 'text-rose-500'}`}>
-                  {viewProduct.stockQty || 0} Units
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Entry Date:</span>
-                <span className="font-semibold text-gray-800 dark:text-gray-200">{viewProduct.entryDate || "N/A"}</span>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsViewModalOpen(false)}
-                className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2.5 rounded-xl font-semibold text-xs tracking-wide transition hover:bg-gray-200 dark:hover:bg-gray-600"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal / Popup for Add/Edit Form */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto space-y-4">
->>>>>>> efafbb8af6410f380f83980d042b7a6ae40b9b41
             <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700">
               <h2 className="font-semibold text-base text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
                 <RefreshCw className="w-4 h-4 text-emerald-600" /> Quick Stock Update
