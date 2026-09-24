@@ -90,7 +90,7 @@ export default function PurchasesPage() {
     localStorage.setItem("purchases_show_form", JSON.stringify(showForm));
   }, [showForm]);
 
-  // Supplier සහ Purchase Date සඳහා localStorage භාවිතා නොකර සාමාන්‍ය state පමණක් භාවිතා කරයි (මෙයින් රීෆ්‍රෙශ් වන තුරු වෙනස් වීම වළක්වයි)
+  // Supplier, Purchase Date, Category සහ Brand සඳහා localStorage භාවිතා නොකරයි (රීෆ්‍රෙශ් කරන තුරු හෝ වෙනස් කරන තුරු ස්ථාවරව පවතී)
   const [selectedSupplier, setSelectedSupplier] = useState<string>("");
   
   const getTodayDateStr = () => {
@@ -101,21 +101,16 @@ export default function PurchasesPage() {
     return `${year}-${month}-${day}`;
   };
   const [purchaseDate, setPurchaseDate] = useState<string>(getTodayDateStr());
+  const [category, setCategory] = useState<string>("");
+  const [brand, setBrand] = useState<string>("");
 
+  // ඉන්වෙන්ටරි සහ අනෙකුත් වෙනස් වන දත්ත පමණක් localStorage හි රඳවා ගනී
   const [partNumber, setPartNumber] = useState<string>(() => {
     if (typeof window !== "undefined") return localStorage.getItem("form_partNumber") || "";
     return "";
   });
   const [itemName, setItemName] = useState<string>(() => {
     if (typeof window !== "undefined") return localStorage.getItem("form_itemName") || "";
-    return "";
-  });
-  const [category, setCategory] = useState<string>(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("form_category") || "";
-    return "";
-  });
-  const [brand, setBrand] = useState<string>(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("form_brand") || "";
     return "";
   });
   const [qty, setQty] = useState<number | "">(() => {
@@ -152,18 +147,15 @@ export default function PurchasesPage() {
     return false;
   });
 
-  // Supplier සහ Purchase Date හැර අනෙක් අත්‍යවශ්‍ය දත්ත පමණක් localStorage හි රඳවා ගනී
   useEffect(() => {
     localStorage.setItem("form_partNumber", partNumber);
     localStorage.setItem("form_itemName", itemName);
-    localStorage.setItem("form_category", category);
-    localStorage.setItem("form_brand", brand);
     localStorage.setItem("form_qty", qty.toString());
     localStorage.setItem("form_costPrice", costPrice.toString());
     localStorage.setItem("form_sellingPrice", sellingPrice.toString());
     localStorage.setItem("form_lowStockAlert", lowStockAlert.toString());
     localStorage.setItem("form_isFavorite", String(isFavorite));
-  }, [partNumber, itemName, category, brand, qty, costPrice, sellingPrice, lowStockAlert, isFavorite]);
+  }, [partNumber, itemName, qty, costPrice, sellingPrice, lowStockAlert, isFavorite]);
 
   const [categorySearch, setCategorySearch] = useState("");
   const [brandSearch, setBrandSearch] = useState("");
@@ -279,11 +271,9 @@ export default function PurchasesPage() {
   const resetForm = () => {
     setEditingId(null);
     setOldQty(0);
-    // මෙහිදී selectedSupplier සහ purchaseDate clear නොකර තබා ඇත, එවිට සේව් කළ පසුද ඒවා එලෙසම පවතී.
+    // මෙහිදී selectedSupplier, purchaseDate, category සහ brand clear නොකර තබා ඇත.
     setPartNumber("");
     setItemName("");
-    setCategory("");
-    setBrand("");
     setQty("");
     setCostPrice("");
     setSellingPrice("");
@@ -297,8 +287,6 @@ export default function PurchasesPage() {
     
     localStorage.removeItem("form_partNumber");
     localStorage.removeItem("form_itemName");
-    localStorage.removeItem("form_category");
-    localStorage.removeItem("form_brand");
     localStorage.removeItem("form_qty");
     localStorage.removeItem("form_costPrice");
     localStorage.removeItem("form_sellingPrice");
@@ -316,10 +304,10 @@ export default function PurchasesPage() {
     setEditingId(p.id || null);
     setOldQty(p.qty || 0);
     setSelectedSupplier(p.supplierName || "");
-    setPartNumber(p.partNumber || "");
-    setItemName(p.itemName || "");
     setCategory(p.category || "");
     setBrand(p.brand || "");
+    setPartNumber(p.partNumber || "");
+    setItemName(p.itemName || "");
     setQty(p.qty ?? "");
     setCostPrice(p.costPrice ?? "");
     setSellingPrice(p.sellingPrice ?? "");
