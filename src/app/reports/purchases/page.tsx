@@ -259,7 +259,7 @@ export default function PurchaseReportsPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500 dark:text-gray-400 font-semibold">Loading...</div>;
+    return <div className="p-8 text-center text-gray-500 dark:text-gray-400 font-semibold text-base">Loading...</div>;
   }
 
   return (
@@ -267,22 +267,22 @@ export default function PurchaseReportsPage() {
       {/* Header & Quick Action Buttons */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-            <BarChart3 className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+          <h1 className="text-3xl font-extrabold text-gray-800 dark:text-white flex items-center gap-2.5">
+            <BarChart3 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             Purchase Analytics & Reports
           </h1>
-          </div>
+        </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           <button
             onClick={exportToCSV}
-            className="px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition shadow flex items-center gap-1.5"
+            className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition shadow flex items-center gap-2"
           >
             <Download className="w-4 h-4" /> Export CSV (Excel)
           </button>
           <button
             onClick={() => window.print()}
-            className="px-3.5 py-2 bg-gray-800 text-white dark:bg-gray-700 rounded-lg text-xs font-bold hover:bg-gray-900 dark:hover:bg-gray-600 transition shadow flex items-center gap-1.5"
+            className="px-4 py-2.5 bg-gray-800 text-white dark:bg-gray-700 rounded-lg text-sm font-bold hover:bg-gray-900 dark:hover:bg-gray-600 transition shadow flex items-center gap-2"
           >
             <Printer className="w-4 h-4" /> Print Report
           </button>
@@ -291,20 +291,20 @@ export default function PurchaseReportsPage() {
 
       {/* Printable Header */}
       <div className="hidden print:block text-center border-b pb-3 mb-4">
-        <h1 className="text-xl font-bold uppercase">Auto Electrical & AC Services</h1>
-        <p className="text-xs">Purchase Expense Report</p>
-        <p className="text-[10px] text-gray-500">Generated on: {new Date().toLocaleString()}</p>
+        <h1 className="text-2xl font-bold uppercase">Auto Electrical & AC Services</h1>
+        <p className="text-sm">Purchase Expense Report</p>
+        <p className="text-xs text-gray-500">Generated on: {new Date().toLocaleString()}</p>
       </div>
 
-      {/* Filters Bar - Updated with Clean Icons & Styling */}
-      <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3 print:hidden transition-colors">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-gray-600 dark:text-gray-400 flex items-center gap-1">
+      {/* Filters Bar */}
+      <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4 print:hidden transition-colors">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Preset Range:
           </span>
           <button
             onClick={() => setDateRange("today")}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-bold transition ${
               dateRange === "today"
                 ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -314,7 +314,7 @@ export default function PurchaseReportsPage() {
           </button>
           <button
             onClick={() => setDateRange("yesterday")}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-bold transition ${
               dateRange === "yesterday"
                 ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -324,7 +324,7 @@ export default function PurchaseReportsPage() {
           </button>
           <button
             onClick={() => setDateRange("7days")}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-bold transition ${
               dateRange === "7days"
                 ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -334,7 +334,7 @@ export default function PurchaseReportsPage() {
           </button>
           <button
             onClick={() => setDateRange("thisMonth")}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-bold transition ${
               dateRange === "thisMonth"
                 ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -344,7 +344,7 @@ export default function PurchaseReportsPage() {
           </button>
           <button
             onClick={() => setDateRange("custom")}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-bold transition ${
               dateRange === "custom"
                 ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -355,38 +355,38 @@ export default function PurchaseReportsPage() {
         </div>
 
         {/* Custom Date Pickers & Dropdown Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5 pt-3.5 border-t border-gray-200 dark:border-gray-800">
           {dateRange === "custom" && (
             <>
               <div>
-                <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 block mb-1">Start Date</label>
+                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 block mb-1">Start Date</label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                  className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-medium"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 block mb-1">End Date</label>
+                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 block mb-1">End Date</label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                  className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-medium"
                 />
               </div>
             </>
           )}
 
           <div>
-            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-1">
-              <Filter className="w-3 h-3 text-purple-500" /> Filter Supplier
+            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 flex items-center gap-1 mb-1">
+              <Filter className="w-3.5 h-3.5 text-purple-500" /> Filter Supplier
             </label>
             <select
               value={selectedSupplier}
               onChange={(e) => setSelectedSupplier(e.target.value)}
-              className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+              className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
             >
               <option value="all">All Suppliers</option>
               {suppliersList.map((sup, idx) => (
@@ -396,13 +396,13 @@ export default function PurchaseReportsPage() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-1">
-              <Tag className="w-3 h-3 text-purple-500" /> Filter Category
+            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 flex items-center gap-1 mb-1">
+              <Tag className="w-3.5 h-3.5 text-purple-500" /> Filter Category
             </label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+              className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
             >
               <option value="all">All Categories</option>
               {categoriesList.map((cat, idx) => (
@@ -412,8 +412,8 @@ export default function PurchaseReportsPage() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-1">
-              <Search className="w-3 h-3 text-emerald-500" /> Search Keyword
+            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 flex items-center gap-1 mb-1">
+              <Search className="w-3.5 h-3.5 text-emerald-500" /> Search Keyword
             </label>
             <div className="relative">
               <input
@@ -421,17 +421,17 @@ export default function PurchaseReportsPage() {
                 placeholder="Search name / part #..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full p-2 pl-7 pr-7 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                className="w-full p-2.5 pl-8 pr-8 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
               />
-              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" />
+              <Search className="w-4 h-4 text-gray-400 absolute left-2.5 top-3" />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
+                  className="absolute right-2.5 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
                   title="Clear search"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -441,60 +441,56 @@ export default function PurchaseReportsPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-blue-600 transition-colors">
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">TOTAL EXPENSE</span>
-          <span className="text-2xl font-black text-blue-700 dark:text-blue-400 mt-1 block">
+        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-blue-600 transition-colors">
+          <span className="text-xs font-extrabold text-gray-500 dark:text-gray-400 block tracking-wide">TOTAL EXPENSE</span>
+          <span className="text-3xl font-black text-blue-700 dark:text-blue-400 mt-1.5 block">
             Rs. {totalExpense.toLocaleString()}
           </span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block"></span>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-emerald-600 transition-colors">
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">UNITS PURCHASED</span>
-          <span className="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-1 block">
-            {totalQtyBought.toLocaleString()} <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Items</span>
+        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-emerald-600 transition-colors">
+          <span className="text-xs font-extrabold text-gray-500 dark:text-gray-400 block tracking-wide">UNITS PURCHASED</span>
+          <span className="text-3xl font-black text-emerald-700 dark:text-emerald-400 mt-1.5 block">
+            {totalQtyBought.toLocaleString()} <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Items</span>
           </span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block"></span>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-purple-600 transition-colors">
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">PURCHASE ORDERS</span>
-          <span className="text-2xl font-black text-purple-700 dark:text-purple-400 mt-1 block">
-            {totalTransactions} <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Orders</span>
+        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-purple-600 transition-colors">
+          <span className="text-xs font-extrabold text-gray-500 dark:text-gray-400 block tracking-wide">PURCHASE ORDERS</span>
+          <span className="text-3xl font-black text-purple-700 dark:text-purple-400 mt-1.5 block">
+            {totalTransactions} <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Orders</span>
           </span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block"></span>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-amber-600 transition-colors">
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 block">AVG ORDER VALUE</span>
-          <span className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-1 block">
+        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm border-l-4 border-l-amber-600 transition-colors">
+          <span className="text-xs font-extrabold text-gray-500 dark:text-gray-400 block tracking-wide">AVG ORDER VALUE</span>
+          <span className="text-3xl font-black text-amber-700 dark:text-amber-400 mt-1.5 block">
             Rs. {Math.round(avgOrderValue).toLocaleString()}
           </span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block"></span>
         </div>
       </div>
 
       {/* Analytics Breakdown Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Supplier Expense Breakdown */}
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3 transition-colors">
-          <h2 className="font-bold text-gray-800 dark:text-gray-100 text-sm border-b border-gray-200 dark:border-gray-800 pb-2 flex justify-between items-center">
-            <span className="flex items-center gap-1.5"><Building2 className="w-4 h-4 text-blue-500" /> Expense by Supplier</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">Share %</span>
+        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4 transition-colors">
+          <h2 className="font-bold text-gray-800 dark:text-gray-100 text-base border-b border-gray-200 dark:border-gray-800 pb-2.5 flex justify-between items-center">
+            <span className="flex items-center gap-2"><Building2 className="w-5 h-5 text-blue-500" /> Expense by Supplier</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold">Share %</span>
           </h2>
-          <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+          <div className="space-y-3.5 max-h-[280px] overflow-y-auto pr-1">
             {supplierBreakdown.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">No data</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No data</p>
             ) : (
               supplierBreakdown.map((sup, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-gray-800 dark:text-gray-200 truncate max-w-[140px]">{sup.name}</span>
+                <div key={idx} className="space-y-1.5">
+                  <div className="flex justify-between text-sm font-bold">
+                    <span className="text-gray-800 dark:text-gray-200 truncate max-w-[160px]">{sup.name}</span>
                     <span className="text-gray-700 dark:text-gray-300">Rs. {sup.total.toLocaleString()} ({sup.percent.toFixed(1)}%)</span>
                   </div>
-                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5 overflow-hidden">
                     <div
-                      className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-500"
+                      className="bg-blue-600 dark:bg-blue-500 h-2.5 rounded-full transition-all duration-500"
                       style={{ width: `${sup.percent}%` }}
                     ></div>
                   </div>
@@ -505,23 +501,23 @@ export default function PurchaseReportsPage() {
         </div>
 
         {/* Category Expense Breakdown */}
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3 transition-colors">
-          <h2 className="font-bold text-gray-800 dark:text-gray-100 text-sm border-b border-gray-200 dark:border-gray-800 pb-2 flex items-center gap-1.5">
-            <Tag className="w-4 h-4 text-purple-500" /> Expense by Category
+        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4 transition-colors">
+          <h2 className="font-bold text-gray-800 dark:text-gray-100 text-base border-b border-gray-200 dark:border-gray-800 pb-2.5 flex items-center gap-2">
+            <Tag className="w-5 h-5 text-purple-500" /> Expense by Category
           </h2>
-          <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+          <div className="space-y-3.5 max-h-[280px] overflow-y-auto pr-1">
             {categoryBreakdown.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">No data</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No data</p>
             ) : (
               categoryBreakdown.map((cat, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold">
+                <div key={idx} className="space-y-1.5">
+                  <div className="flex justify-between text-sm font-bold">
                     <span className="text-gray-800 dark:text-gray-200">{cat.category}</span>
                     <span className="text-gray-700 dark:text-gray-300">Rs. {cat.total.toLocaleString()} ({cat.percent.toFixed(1)}%)</span>
                   </div>
-                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5 overflow-hidden">
                     <div
-                      className="bg-purple-600 dark:bg-purple-500 h-2 rounded-full transition-all duration-500"
+                      className="bg-purple-600 dark:bg-purple-500 h-2.5 rounded-full transition-all duration-500"
                       style={{ width: `${cat.percent}%` }}
                     ></div>
                   </div>
@@ -532,23 +528,23 @@ export default function PurchaseReportsPage() {
         </div>
 
         {/* Top Purchased Products */}
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3 transition-colors">
-          <h2 className="font-bold text-gray-800 dark:text-gray-100 text-sm border-b border-gray-200 dark:border-gray-800 pb-2 flex items-center gap-1.5">
-            <Award className="w-4 h-4 text-amber-500" /> Top 5 Purchased Items
+        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4 transition-colors">
+          <h2 className="font-bold text-gray-800 dark:text-gray-100 text-base border-b border-gray-200 dark:border-gray-800 pb-2.5 flex items-center gap-2">
+            <Award className="w-5 h-5 text-amber-500" /> Top 5 Purchased Items
           </h2>
-          <div className="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
             {topProducts.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">No data</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No data</p>
             ) : (
               topProducts.map((prod, idx) => (
-                <div key={idx} className="flex justify-between items-center text-xs p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-800">
+                <div key={idx} className="flex justify-between items-center text-sm p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-800">
                   <div>
-                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400 block text-[11px]">{prod.partNumber}</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200 truncate block max-w-[150px]">{prod.name}</span>
+                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400 block text-xs">{prod.partNumber}</span>
+                    <span className="font-bold text-gray-800 dark:text-gray-200 truncate block max-w-[160px]">{prod.name}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold text-gray-800 dark:text-gray-100 block">Rs. {prod.totalCost.toLocaleString()}</span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400">{prod.qty} Units bought</span>
+                    <span className="font-extrabold text-gray-900 dark:text-gray-100 block">Rs. {prod.totalCost.toLocaleString()}</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{prod.qty} Units bought</span>
                   </div>
                 </div>
               ))
@@ -558,35 +554,35 @@ export default function PurchaseReportsPage() {
       </div>
 
       {/* Detailed Purchases Register Table */}
-      <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-3 transition-colors">
-        <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-2">
-          <h2 className="font-bold text-gray-800 dark:text-gray-100 text-base flex items-center gap-1.5">
-            <ClipboardList className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Purchase Register ({filteredPurchases.length})
+      <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4 transition-colors">
+        <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-3">
+          <h2 className="font-extrabold text-gray-800 dark:text-gray-100 text-lg flex items-center gap-2">
+            <ClipboardList className="w-6 h-6 text-blue-600 dark:text-blue-400" /> Purchase Register ({filteredPurchases.length})
           </h2>
-          <span className="text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-900">
+          <span className="text-sm font-extrabold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-3 py-1 rounded-full border border-blue-200 dark:border-blue-900">
             Total Spent: Rs. {totalExpense.toLocaleString()}
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
-                <th className="p-2.5">Date</th>
-                <th className="p-2.5">Supplier</th>
-                <th className="p-2.5">Part # / Item Name</th>
-                <th className="p-2.5">Category / Brand</th>
-                <th className="p-2.5 text-center">Qty</th>
-                <th className="p-2.5 text-right">Cost Price</th>
-                <th className="p-2.5 text-right">Selling Price</th>
-                <th className="p-2.5 text-right">Total Expense</th>
-                {userRole === "admin" && <th className="p-2.5 text-center print:hidden">Action</th>}
+              <tr className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-bold border-b border-gray-200 dark:border-gray-700">
+                <th className="p-3.5">Date</th>
+                <th className="p-3.5">Supplier</th>
+                <th className="p-3.5">Part # / Item Name</th>
+                <th className="p-3.5">Category / Brand</th>
+                <th className="p-3.5 text-center">Qty</th>
+                <th className="p-3.5 text-right">Cost Price</th>
+                <th className="p-3.5 text-right">Selling Price</th>
+                <th className="p-3.5 text-right">Total Expense</th>
+                {userRole === "admin" && <th className="p-3.5 text-center print:hidden">Action</th>}
               </tr>
             </thead>
             <tbody>
               {filteredPurchases.length === 0 ? (
                 <tr>
-                  <td colSpan={userRole === "admin" ? 9 : 8} className="text-center py-8 text-gray-400 dark:text-gray-500">
+                  <td colSpan={userRole === "admin" ? 9 : 8} className="text-center py-10 text-gray-400 dark:text-gray-500 font-medium text-base">
                     No purchase records were found for the selected parameters
                   </td>
                 </tr>
@@ -594,35 +590,35 @@ export default function PurchaseReportsPage() {
                 filteredPurchases.map((p) => {
                   const pDate = parseDate(p.createdAt);
                   return (
-                    <tr key={p.id} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      <td className="p-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap">{pDate.toLocaleDateString()}</td>
-                      <td className="p-2.5 font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">{p.supplierName || "General"}</td>
-                      <td className="p-2.5">
-                        <span className="font-mono text-blue-600 dark:text-blue-400 font-bold block">{p.partNumber}</span>
-                        <span className="text-gray-800 dark:text-gray-200 font-medium">{p.itemName}</span>
+                    <tr key={p.id} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors font-medium">
+                      <td className="p-3.5 text-gray-700 dark:text-gray-300 whitespace-nowrap">{pDate.toLocaleDateString()}</td>
+                      <td className="p-3.5 font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">{p.supplierName || "General"}</td>
+                      <td className="p-3.5">
+                        <span className="font-mono text-blue-600 dark:text-blue-400 font-bold block text-xs">{p.partNumber}</span>
+                        <span className="text-gray-900 dark:text-gray-100 font-bold">{p.itemName}</span>
                       </td>
-                      <td className="p-2.5 whitespace-nowrap">
-                        <span className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded text-[10px] font-semibold block w-fit mb-0.5">
+                      <td className="p-3.5 whitespace-nowrap">
+                        <span className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 px-2 py-0.5 rounded text-xs font-bold block w-fit mb-1">
                           {p.category || "General"}
                         </span>
-                        <span className="bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded text-[10px] font-semibold border border-purple-200 dark:border-purple-900 block w-fit">
+                        <span className="bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded text-xs font-bold border border-purple-200 dark:border-purple-900 block w-fit">
                           {p.brand || "Generic"}
                         </span>
                       </td>
-                      <td className="p-2.5 text-center font-extrabold text-gray-800 dark:text-gray-200">{p.qty}</td>
-                      <td className="p-2.5 text-right text-gray-600 dark:text-gray-400">Rs. {(p.costPrice || 0).toLocaleString()}</td>
-                      <td className="p-2.5 text-right text-emerald-700 dark:text-emerald-400 font-semibold">Rs. {(p.sellingPrice || 0).toLocaleString()}</td>
-                      <td className="p-2.5 text-right font-extrabold text-blue-700 dark:text-blue-400">
+                      <td className="p-3.5 text-center font-black text-gray-900 dark:text-gray-100 text-base">{p.qty}</td>
+                      <td className="p-3.5 text-right text-gray-700 dark:text-gray-300">Rs. {(p.costPrice || 0).toLocaleString()}</td>
+                      <td className="p-3.5 text-right text-emerald-700 dark:text-emerald-400 font-bold">Rs. {(p.sellingPrice || 0).toLocaleString()}</td>
+                      <td className="p-3.5 text-right font-black text-blue-700 dark:text-blue-400 text-base">
                         Rs. {(p.totalCost || (p.costPrice || 0) * (p.qty || 0)).toLocaleString()}
                       </td>
                       
                       {userRole === "admin" && (
-                        <td className="p-2.5 text-center whitespace-nowrap print:hidden">
+                        <td className="p-3.5 text-center whitespace-nowrap print:hidden">
                           <button
                             onClick={(e) => handleDeletePurchase(p.id!, e)}
-                            className="bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white px-2.5 py-1 rounded text-[11px] font-bold transition border border-red-200 dark:border-red-900 flex items-center gap-1 mx-auto"
+                            className="bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded text-xs font-bold transition border border-red-200 dark:border-red-900 flex items-center gap-1.5 mx-auto"
                           >
-                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                            <Trash2 className="w-4 h-4" /> Delete
                           </button>
                         </td>
                       )}
@@ -633,11 +629,11 @@ export default function PurchaseReportsPage() {
             </tbody>
             {filteredPurchases.length > 0 && (
               <tfoot>
-                <tr className="bg-gray-50 dark:bg-gray-800/80 font-extrabold text-gray-800 dark:text-gray-100 border-t-2 border-gray-300 dark:border-gray-700">
-                  <td colSpan={4} className="p-3 text-right">GRAND TOTALS:</td>
-                  <td className="p-3 text-center">{totalQtyBought} Units</td>
+                <tr className="bg-gray-50 dark:bg-gray-800/80 font-black text-gray-900 dark:text-gray-100 border-t-2 border-gray-300 dark:border-gray-700 text-sm">
+                  <td colSpan={4} className="p-4 text-right">GRAND TOTALS:</td>
+                  <td className="p-4 text-center">{totalQtyBought} Units</td>
                   <td colSpan={2}></td>
-                  <td className="p-3 text-right text-blue-700 dark:text-blue-400 text-sm">Rs. {totalExpense.toLocaleString()}</td>
+                  <td className="p-4 text-right text-blue-700 dark:text-blue-400 text-base">Rs. {totalExpense.toLocaleString()}</td>
                   {userRole === "admin" && <td></td>}
                 </tr>
               </tfoot>
