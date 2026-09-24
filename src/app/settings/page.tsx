@@ -104,7 +104,7 @@ export default function SettingsPage() {
     if (confirm("Do you want to restart the invoice number from 0 (SAP-0)?")) {
       try {
         await setDoc(doc(db, "settings", "invoiceCounter"), { currentNo: 0 });
-        localStorage.setItem("pos_invoice_no", "0"); // බ්‍රව්සරයේ LocalStorage එකද 0 ලෙස යාවත්කාලීන කරයි
+        localStorage.setItem("pos_invoice_no", "0");
         alert("Invoice number successfully updated to 0!");
       } catch (err) {
         console.error("Error resetting counter:", err);
@@ -133,10 +133,10 @@ export default function SettingsPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto font-sans space-y-6 bg-gray-50 dark:bg-gray-950 min-h-screen text-gray-900 dark:text-gray-100 transition-colors duration-300">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-          <Settings className="w-7 h-7 text-blue-600 dark:text-blue-400" /> System Settings & Receipt Configuration
+        <h1 className="text-3xl font-extrabold text-gray-800 dark:text-white flex items-center gap-2.5">
+          <Settings className="w-8 h-8 text-blue-600 dark:text-blue-400" /> System Settings & Receipt Configuration
         </h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400"></p>
+        <p className="text-sm text-gray-500 dark:text-gray-400"></p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -144,15 +144,15 @@ export default function SettingsPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Appearance / Theme Settings */}
           <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
-            <h2 className="font-bold text-gray-800 dark:text-gray-100 text-sm border-b border-gray-200 dark:border-gray-800 pb-2 flex items-center gap-2">
-              <Palette className="w-4 h-4 text-purple-600 dark:text-purple-400" /> Appearance (Theme) - For Everyone
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 text-base border-b border-gray-200 dark:border-gray-800 pb-2.5 flex items-center gap-2">
+              <Palette className="w-5 h-5 text-purple-600 dark:text-purple-400" /> Appearance (Theme) - For Everyone
             </h2>
             <div>
               <label className="text-xs font-bold text-gray-600 dark:text-gray-400 block mb-1">System Theme</label>
               <select
                 value={theme}
                 onChange={(e) => handleThemeChange(e.target.value)}
-                className="w-full sm:w-1/2 p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-semibold"
+                className="w-full sm:w-1/2 p-3 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-bold"
               >
                 <option value="light">Light Mode (Standard)</option>
                 <option value="dark">Dark Mode (Dark Look)</option>
@@ -166,8 +166,8 @@ export default function SettingsPage() {
               <form onSubmit={handleSaveSettings} className="space-y-6">
                 {/* Business Profile Settings */}
                 <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
-                  <h2 className="font-bold text-gray-800 dark:text-gray-100 text-sm border-b border-gray-200 dark:border-gray-800 pb-2 flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Business & Receipt Profile (Admin Only)
+                  <h2 className="font-bold text-gray-800 dark:text-gray-100 text-base border-b border-gray-200 dark:border-gray-800 pb-2.5 flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Business & Receipt Profile (Admin Only)
                   </h2>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -177,7 +177,7 @@ export default function SettingsPage() {
                         type="text"
                         value={storeName}
                         onChange={(e) => setStoreName(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                        className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-medium"
                         required
                       />
                     </div>
@@ -188,7 +188,7 @@ export default function SettingsPage() {
                         type="text"
                         value={storePhone}
                         onChange={(e) => setStorePhone(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                        className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-medium"
                       />
                     </div>
 
@@ -198,7 +198,7 @@ export default function SettingsPage() {
                         type="text"
                         value={storeAddress}
                         onChange={(e) => setStoreAddress(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                        className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-medium"
                       />
                     </div>
                   </div>
@@ -206,8 +206,8 @@ export default function SettingsPage() {
 
                 {/* POS & Tax Settings */}
                 <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
-                  <h2 className="font-bold text-gray-800 dark:text-gray-100 text-sm border-b border-gray-200 dark:border-gray-800 pb-2 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> POS & Billing Preferences
+                  <h2 className="font-bold text-gray-800 dark:text-gray-100 text-base border-b border-gray-200 dark:border-gray-800 pb-2.5 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /> POS & Billing Preferences
                   </h2>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -216,7 +216,7 @@ export default function SettingsPage() {
                       <select
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-semibold"
+                        className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-bold"
                       >
                         <option value="LKR">LKR (Rs.)</option>
                         <option value="USD">USD ($)</option>
@@ -229,7 +229,7 @@ export default function SettingsPage() {
                         type="number"
                         value={taxRate}
                         onChange={(e) => setTaxRate(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                        className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-medium"
                       />
                     </div>
 
@@ -239,7 +239,7 @@ export default function SettingsPage() {
                         type="text"
                         value={footerMessage}
                         onChange={(e) => setFooterMessage(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800"
+                        className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 font-medium"
                       />
                     </div>
                   </div>
@@ -249,32 +249,32 @@ export default function SettingsPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition shadow-md disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-md disabled:opacity-50 inline-flex items-center justify-center gap-2"
                 >
-                  <Save className="w-4 h-4" /> {saving ? "Saving..." : "Save Settings"}
+                  <Save className="w-5 h-5" /> {saving ? "Saving..." : "Save Settings"}
                 </button>
               </form>
 
               {/* Reset Invoice Counter Section (Admin Only) */}
               <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm space-y-3">
-                <h2 className="font-bold text-red-600 dark:text-red-400 text-sm border-b border-red-100 dark:border-red-900/30 pb-2 flex items-center gap-2">
-                  <RotateCcw className="w-4 h-4" /> Reset Invoice Counter (Admin Control)
+                <h2 className="font-bold text-red-600 dark:text-red-400 text-base border-b border-red-100 dark:border-red-900/30 pb-2.5 flex items-center gap-2">
+                  <RotateCcw className="w-5 h-5" /> Reset Invoice Counter (Admin Control)
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   This allows resetting the next issued invoice number to start from <span className="font-bold text-red-500">SAP-0</span>.
                 </p>
                 <button
                   type="button"
                   onClick={handleResetCounter}
-                  className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-xs inline-flex items-center gap-2"
+                  className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition shadow-xs inline-flex items-center gap-2"
                 >
-                  <RotateCcw className="w-4 h-4" /> Reset Invoice to SAP-0
+                  <RotateCcw className="w-5 h-5" /> Reset Invoice to SAP-0
                 </button>
               </div>
             </div>
           ) : (
-            <div className="p-4 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-900 rounded-xl text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 shrink-0" />
+            <div className="p-5 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-900 rounded-xl text-sm text-amber-800 dark:text-amber-200 flex items-center gap-3">
+              <ShieldAlert className="w-6 h-6 shrink-0" />
               <span>Business details and POS settings can only be changed by an **Admin**.</span>
             </div>
           )}
@@ -282,16 +282,16 @@ export default function SettingsPage() {
 
         {/* Right Column: Live Receipt Preview using ReceiptTemplate */}
         <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm sticky top-6">
-            <h2 className="font-bold text-gray-800 dark:text-gray-100 text-sm border-b border-gray-200 dark:border-gray-800 pb-2 mb-3 flex items-center gap-2">
-              <Printer className="w-4 h-4 text-blue-500" /> Live Receipt Preview
+          <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm sticky top-6">
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 text-base border-b border-gray-200 dark:border-gray-800 pb-2.5 mb-3.5 flex items-center gap-2">
+              <Printer className="w-5 h-5 text-blue-500" /> Live Receipt Preview
             </h2>
             
             {/* Real-time Receipt Template Component */}
-            <div className="bg-gray-100 dark:bg-gray-950 p-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-800 overflow-hidden">
+            <div className="bg-gray-100 dark:bg-gray-950 p-2.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-800 overflow-hidden">
               <ReceiptTemplate invoice={sampleInvoice} />
             </div>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center">
               Changes you make to the text above will be instantly reflected on the receipt.
             </p>
           </div>
