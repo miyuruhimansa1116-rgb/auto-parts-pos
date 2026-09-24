@@ -755,7 +755,7 @@ export default function SalesReportsPage() {
         {/* Invoice Details & Reprint Modal */}
         {selectedInvoice && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-0 overflow-hidden flex flex-col max-h-[90vh] border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh] border border-gray-200 dark:border-gray-700">
               <div className="bg-gray-900 dark:bg-gray-950 text-white p-4 flex justify-between items-center no-print border-b border-gray-800">
                 <div>
                   <h3 className="font-bold text-base flex items-center gap-2">
@@ -782,7 +782,7 @@ export default function SalesReportsPage() {
                   Close
                 </button>
                 <button
-                  onClick={() => handlePrintInvoice(selectedInvoice)`}
+                  onClick={() => handlePrintInvoice(selectedInvoice)}
                   className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
                 >
                   <Printer className="w-4 h-4" /> Reprint Bill
