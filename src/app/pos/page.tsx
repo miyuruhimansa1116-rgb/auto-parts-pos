@@ -49,10 +49,38 @@ export default function POSPage() {
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
 
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [discount, setDiscount] = useState<number>(0);
-  const [cashPaid, setCashPaid] = useState<number>(0);
-  const [customerName, setCustomerName] = useState<string>(""); 
+  // LocalStorage මඟින් දත්ත ආරක්ෂා කරගැනීම සඳහා Initial States සකස් කිරීම
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("pos_persistent_cart");
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  const [discount, setDiscount] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("pos_persistent_discount");
+      return saved ? Number(saved) : 0;
+    }
+    return 0;
+  });
+
+  const [cashPaid, setCashPaid] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("pos_persistent_cashPaid");
+      return saved ? Number(saved) : 0;
+    }
+    return 0;
+  });
+
+  const [customerName, setCustomerName] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("pos_persistent_customerName") || "";
+    }
+    return "";
+  });
+
   const [currentInvoiceNo, setCurrentInvoiceNo] = useState<number>(0);
 
   // Admin & Invoice Counter States
@@ -65,15 +93,64 @@ export default function POSPage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // Custom Date States
-  const [enableCustomDate, setEnableCustomDate] = useState<boolean>(false);
-  const [customBillDate, setCustomBillDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
+  const [enableCustomDate, setEnableCustomDate] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("pos_persistent_enableCustomDate") === "true";
+    }
+    return false;
+  });
+
+  const [customBillDate, setCustomBillDate] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("pos_persistent_customBillDate") || new Date().toISOString().split("T")[0];
+    }
+    return new Date().toISOString().split("T")[0];
+  });
 
   // Draft States
   const [draftTitle, setDraftTitle] = useState("");
   const [showDraftsModal, setShowDraftsModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"products" | "billing">("products");
+
+  // බිලේ දත්ත වෙනස් වන විට ස්වයංක්‍රීයව LocalStorage හි සුරැකීම (រීෆ්‍රෙශ් කළත් මකී නොයෑමට)
+  useEffect(() => {
+    localStorage.setItem("pos_persistent_cart", JSON.stringify(cart));
+  }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem("pos_persistent_discount", discount.toString());
+  }, [discount]);
+
+  useEffect(() => {
+    localStorage.setItem("pos_persistent_cashPaid", cashPaid.toString());
+  }, [cashPaid]);
+
+  useEffect(() => {
+    localStorage.setItem("pos_persistent_customerName", customerName);
+  }, [customerName]);
+
+  useEffect(() => {
+    localStorage.setItem("pos_persistent_enableCustomDate", enableCustomDate.toString());
+  }, [enableCustomDate]);
+
+  useEffect(() => {
+    localStorage.setItem("pos_persistent_customBillDate", customBillDate);
+  }, [customBillDate]);
+
+  // තාවකාලික බිල් දත්ත පිරිසිදු කිරීමට අවශ්‍ය නම් පාවිච්චි කරන function එකක්
+  const clearPersistentCart = () => {
+    setCart([]);
+    setDiscount(0);
+    setCashPaid(0);
+    setCustomerName("");
+    setEnableCustomDate(false);
+    localStorage.removeItem("pos_persistent_cart");
+    localStorage.removeItem("pos_persistent_discount");
+    localStorage.removeItem("pos_persistent_cashPaid");
+    localStorage.removeItem("pos_persistent_customerName");
+    localStorage.removeItem("pos_persistent_enableCustomDate");
+    localStorage.removeItem("pos_persistent_customBillDate");
+  };
 
   const syncOfflineSales = async () => {
     if (!navigator.onLine) return;
@@ -232,6 +309,7 @@ export default function POSPage() {
       });
       alert("Bill saved as Draft!");
       setDraftTitle("");
+      clearPersistentCart(); // ඩ්‍රාෆ්ට් එකකට දැමූ පසු වර්තමාන කාට් එක ක්ලියර් කරයි
     } catch (error) {
       alert("Draft saved locally / Offline mode active.");
     }
@@ -381,10 +459,8 @@ export default function POSPage() {
       saveToOfflineQueue(saleData);
     }
 
-    setCart([]);
-    setDiscount(0);
-    setCashPaid(0);
-    setCustomerName("");
+    // බිල මුද්‍රණය කර සාර්ථකව අවසන් වූ පසු පමණක් දත්ත ඉවත් කර අලුත් බිලකට සූදානම් කරයි
+    clearPersistentCart();
   };
 
   const saveToOfflineQueue = (sale: any) => {
@@ -595,9 +671,7 @@ export default function POSPage() {
                           <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                         </div>
                       )}
-                      {/* මෙහි ප්‍රඩක්ට් නම්බර් එකේ සයිස් එක වැඩි කර ඇත (text-xs සිට text-sm දක්වා) */}
                       <span className="text-xs sm:text-sm font-mono font-bold text-blue-600 dark:text-blue-400 block tracking-wide">{product.partNumber || "-"}</span>
-                      {/* නිෂ්පාදනයේ නම (Product Name) ටිකක් ලොකු කර ඇත */}
                       <h3 className="font-bold text-gray-800 dark:text-gray-100 text-xs sm:text-sm line-clamp-2 mt-1">{product.name}</h3>
                     </div>
 
