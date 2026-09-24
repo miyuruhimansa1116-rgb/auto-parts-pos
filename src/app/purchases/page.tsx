@@ -90,10 +90,18 @@ export default function PurchasesPage() {
     localStorage.setItem("purchases_show_form", JSON.stringify(showForm));
   }, [showForm]);
 
-  const [selectedSupplier, setSelectedSupplier] = useState<string>(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("form_supplier") || "";
-    return "";
-  });
+  // Supplier සහ Purchase Date සඳහා localStorage භාවිතා නොකර සාමාන්‍ය state පමණක් භාවිතා කරයි (මෙයින් රීෆ්‍රෙශ් වන තුරු වෙනස් වීම වළක්වයි)
+  const [selectedSupplier, setSelectedSupplier] = useState<string>("");
+  
+  const getTodayDateStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const [purchaseDate, setPurchaseDate] = useState<string>(getTodayDateStr());
+
   const [partNumber, setPartNumber] = useState<string>(() => {
     if (typeof window !== "undefined") return localStorage.getItem("form_partNumber") || "";
     return "";
@@ -144,8 +152,8 @@ export default function PurchasesPage() {
     return false;
   });
 
+  // Supplier සහ Purchase Date හැර අනෙක් අත්‍යවශ්‍ය දත්ත පමණක් localStorage හි රඳවා ගනී
   useEffect(() => {
-    localStorage.setItem("form_supplier", selectedSupplier);
     localStorage.setItem("form_partNumber", partNumber);
     localStorage.setItem("form_itemName", itemName);
     localStorage.setItem("form_category", category);
@@ -155,7 +163,7 @@ export default function PurchasesPage() {
     localStorage.setItem("form_sellingPrice", sellingPrice.toString());
     localStorage.setItem("form_lowStockAlert", lowStockAlert.toString());
     localStorage.setItem("form_isFavorite", String(isFavorite));
-  }, [selectedSupplier, partNumber, itemName, category, brand, qty, costPrice, sellingPrice, lowStockAlert, isFavorite]);
+  }, [partNumber, itemName, category, brand, qty, costPrice, sellingPrice, lowStockAlert, isFavorite]);
 
   const [categorySearch, setCategorySearch] = useState("");
   const [brandSearch, setBrandSearch] = useState("");
@@ -196,15 +204,6 @@ export default function PurchasesPage() {
 
   const supplierSelectRef = useRef<HTMLSelectElement | null>(null);
   const lastFocusedInputRef = useRef<HTMLElement | null>(null);
-
-  const getTodayDateStr = () => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-  const [purchaseDate, setPurchaseDate] = useState<string>(getTodayDateStr());
 
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
@@ -280,7 +279,7 @@ export default function PurchasesPage() {
   const resetForm = () => {
     setEditingId(null);
     setOldQty(0);
-    setSelectedSupplier("");
+    // මෙහිදී selectedSupplier සහ purchaseDate clear නොකර තබා ඇත, එවිට සේව් කළ පසුද ඒවා එලෙසම පවතී.
     setPartNumber("");
     setItemName("");
     setCategory("");
@@ -292,12 +291,10 @@ export default function PurchasesPage() {
     setIsFavorite(false);
     setImageFile(null);
     setImageUrlState("");
-    setPurchaseDate(getTodayDateStr());
     setErrorMessage(null);
     setCategorySearch("");
     setBrandSearch("");
     
-    localStorage.removeItem("form_supplier");
     localStorage.removeItem("form_partNumber");
     localStorage.removeItem("form_itemName");
     localStorage.removeItem("form_category");
@@ -457,7 +454,6 @@ export default function PurchasesPage() {
       };
 
       if (editingId) {
-        // Purchases එක Update කිරීම
         await updateDoc(doc(db, "purchases", editingId), purchaseData);
 
         const qtyDiff = Number(qty) - oldQty;
@@ -469,10 +465,9 @@ export default function PurchasesPage() {
 
         if (!querySnapshot.empty) {
           const prodDoc = querySnapshot.docs[0];
-          // Products එකතුව ද Qty හැර අනෙකුත් සියලුම විස්තර (නම, මිල, කාණ්ඩය ආදී) සමඟ update වීම
           await updateDoc(doc(db, "products", prodDoc.id), {
             name: trimmedItemName,
-            stockQty: increment(qtyDiff), // Qty වෙනස් වීම පමණක් මෙහිදී සමතුලිත වේ
+            stockQty: increment(qtyDiff),
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
             lowStockAlert: finalLowStockAlert,
