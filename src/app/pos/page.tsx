@@ -459,7 +459,7 @@ export default function POSPage() {
             </div>
             <div>
               <h1 className="text-lg sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">POS Billing</h1>
-              <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Invoice: <span className="font-bold text-blue-600 dark:text-blue-400">#SAP-{currentInvoiceNo}</span></p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">Invoice: <span className="font-bold text-blue-600 dark:text-blue-400">#SAP-{currentInvoiceNo}</span></p>
             </div>
           </div>
           
@@ -467,7 +467,7 @@ export default function POSPage() {
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowDraftsModal(true)}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-4 py-2.5 rounded-xl text-xs font-bold transition hover:bg-amber-100 shadow-xs"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition hover:bg-amber-100 shadow-xs"
             >
               <FolderOpen className="w-4 h-4" />
               <span>Saved Drafts ({drafts.length})</span>
@@ -479,7 +479,7 @@ export default function POSPage() {
                 setIsAdminAuthenticated(false);
                 setAdminPassword("");
               }}
-              className="flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold transition hover:bg-slate-200 shadow-xs"
+              className="flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition hover:bg-slate-200 shadow-xs"
               title="Admin: Change Starting Invoice No"
             >
               <Settings className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -502,7 +502,7 @@ export default function POSPage() {
           >
             🛒 Cart 
             {totalCartCount > 0 && (
-              <span className="bg-blue-600 text-white px-1.5 py-0.5 rounded-full text-[10px]">
+              <span className="bg-blue-600 text-white px-1.5 py-0.5 rounded-full text-xs">
                 {totalCartCount}
               </span>
             )}
@@ -517,22 +517,22 @@ export default function POSPage() {
             {/* Search & Filters */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
               <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search part # / name..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold bg-gray-50/50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold bg-gray-50/50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div className="relative">
-                <Layers className="absolute left-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Layers className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold bg-gray-50/50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                  className="w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold bg-gray-50/50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                 >
                   <option value="all">All Categories</option>
                   {categories.map((cat, idx) => (
@@ -542,11 +542,11 @@ export default function POSPage() {
               </div>
 
               <div className="relative">
-                <Tag className="absolute left-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Tag className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
                 <select
                   value={selectedBrand}
                   onChange={(e) => setSelectedBrand(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold bg-gray-50/50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                  className="w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold bg-gray-50/50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                 >
                   <option value="all">All Brands</option>
                   {brands.map((brand, idx) => (
@@ -556,11 +556,11 @@ export default function POSPage() {
               </div>
 
               <div className="relative">
-                <SlidersHorizontal className="absolute left-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+                <SlidersHorizontal className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold bg-gray-50/50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                  className="w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold bg-gray-50/50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                 >
                   <option value="latest">Sort: Latest</option>
                   <option value="name-asc">Sort: Name (A to Z)</option>
@@ -583,43 +583,41 @@ export default function POSPage() {
                   <div
                     key={product.id}
                     onClick={(e) => handleIncreaseQty(product, e)}
-                    className={`p-2.5 sm:p-3.5 border rounded-2xl text-left transition bg-gray-50/50 dark:bg-gray-700/40 flex flex-col justify-between cursor-pointer select-none ${
+                    className={`p-3 sm:p-4 border rounded-2xl text-left transition bg-gray-50/50 dark:bg-gray-700/40 flex flex-col justify-between cursor-pointer select-none ${
                       isInCart 
                         ? "border-red-500 bg-red-50/60 dark:bg-red-950/40 shadow-xs" 
                         : "border-gray-100 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/25 dark:hover:bg-blue-950/20"
                     }`}
                   >
                     <div>
-                      {product.imageUrl ? (
+                      {product.imageUrl && (
                         <div className="w-full h-20 sm:h-24 mb-2 bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 flex items-center justify-center">
                           <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                         </div>
-                      ) : (
-                        <div className="w-full h-20 sm:h-24 mb-2 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-gray-400 text-[10px]">
-                          <Package className="w-6 h-6 opacity-40" />
-                        </div>
                       )}
-                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 block">{product.partNumber || "-"}</span>
-                      <h3 className="font-bold text-gray-800 dark:text-gray-100 text-[11px] sm:text-xs line-clamp-2 mt-0.5">{product.name}</h3>
+                      {/* මෙහි ප්‍රඩක්ට් නම්බර් එකේ සයිස් එක වැඩි කර ඇත (text-xs සිට text-sm දක්වා) */}
+                      <span className="text-xs sm:text-sm font-mono font-bold text-blue-600 dark:text-blue-400 block tracking-wide">{product.partNumber || "-"}</span>
+                      {/* නිෂ්පාදනයේ නම (Product Name) ටිකක් ලොකු කර ඇත */}
+                      <h3 className="font-bold text-gray-800 dark:text-gray-100 text-xs sm:text-sm line-clamp-2 mt-1">{product.name}</h3>
                     </div>
 
-                    <div className="mt-2.5 sm:mt-3 flex flex-col gap-1.5">
+                    <div className="mt-3 flex flex-col gap-1.5">
                       <div className="flex justify-between items-center">
-                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-[11px] sm:text-xs">LKR {(product.sellingPrice || 0).toLocaleString()}</span>
+                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">LKR {(product.sellingPrice || 0).toLocaleString()}</span>
                          
-                        <div className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-lg shadow-2xs" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1.5 rounded-xl shadow-2xs" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={(e) => handleDecreaseQty(product, e)}
-                            className="w-6 h-6 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 font-bold rounded-md flex items-center justify-center text-xs hover:bg-red-100 transition"
+                            className="w-7 h-7 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 font-bold rounded-lg flex items-center justify-center text-sm hover:bg-red-100 transition"
                           >
-                            <Minus className="w-3.5 h-3.5" />
+                            <Minus className="w-4 h-4" />
                           </button>
-                          <span className="text-xs font-black px-1.5 text-gray-700 dark:text-gray-200 min-w-[18px] text-center">{currentQty}</span>
+                          <span className="text-sm font-black px-2 text-gray-700 dark:text-gray-200 min-w-[22px] text-center">{currentQty}</span>
                           <button
                             onClick={(e) => handleIncreaseQty(product, e)}
-                            className="w-6 h-6 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-bold rounded-md flex items-center justify-center text-xs hover:bg-emerald-100 transition"
+                            className="w-7 h-7 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-bold rounded-lg flex items-center justify-center text-sm hover:bg-emerald-100 transition"
                           >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Plus className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -639,26 +637,26 @@ export default function POSPage() {
               />
             </div>
 
-            <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3 bg-gray-50/50 dark:bg-gray-700/30 p-3 sm:p-4 rounded-xl">
-              <div className="flex justify-between items-center text-xs">
+            <div className="space-y-3.5 border-t border-gray-100 dark:border-gray-700 pt-3 bg-gray-50/50 dark:bg-gray-700/30 p-3.5 sm:p-4 rounded-xl">
+              <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500 dark:text-gray-400 font-semibold">Customer / Vehicle:</span>
                 <input
                   type="text"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   placeholder="Optional (e.g. WP-1234)"
-                  className="w-36 p-1.5 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-40 p-2 border border-gray-200 dark:border-gray-600 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Custom Date Section */}
               <div className="space-y-2 pt-1 border-t border-gray-200 dark:border-gray-700">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-600 dark:text-gray-300">
+                <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300">
                   <input
                     type="checkbox"
                     checked={enableCustomDate}
                     onChange={(e) => setEnableCustomDate(e.target.checked)}
-                    className="w-3.5 h-3.5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                   />
                   <span>Change Bill Date</span>
                 </label>
@@ -670,24 +668,24 @@ export default function POSPage() {
                       type="date"
                       value={customBillDate}
                       onChange={(e) => setCustomBillDate(e.target.value)}
-                      className="w-full p-1.5 border border-blue-300 dark:border-blue-700 rounded-xl text-xs font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 outline-none"
+                      className="w-full p-2 border border-blue-300 dark:border-blue-700 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 outline-none"
                     />
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-between items-center text-xs pt-1">
+              <div className="flex justify-between items-center text-sm pt-1">
                 <span className="text-gray-500 dark:text-gray-400 font-semibold">Discount (LKR):</span>
                 <input
                   type="number"
                   value={discount || ""}
                   onChange={(e) => setDiscount(Number(e.target.value))}
                   placeholder="0"
-                  className="w-28 p-1.5 border border-gray-200 dark:border-gray-600 rounded-xl text-right text-xs font-bold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-32 p-2 border border-gray-200 dark:border-gray-600 rounded-xl text-right text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="flex justify-between items-center text-xs">
+              <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500 dark:text-gray-400 font-semibold">Cash Paid (LKR):</span>
                 <input
                   type="number"
@@ -697,13 +695,13 @@ export default function POSPage() {
                     if (checkoutError) setCheckoutError(null);
                   }}
                   placeholder="0"
-                  className="w-32 p-1.5 border border-gray-200 dark:border-gray-600 rounded-xl text-right font-black bg-white dark:bg-gray-700 text-sm text-emerald-600 dark:text-emerald-400 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-36 p-2 border border-gray-200 dark:border-gray-600 rounded-xl text-right font-black bg-white dark:bg-gray-700 text-base text-emerald-600 dark:text-emerald-400 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Cashier Error Message Box */}
               {checkoutError && (
-                <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-600 dark:text-rose-400 text-[11px] font-bold flex items-center gap-2 animate-shake">
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-2 animate-shake">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{checkoutError}</span>
                 </div>
@@ -716,22 +714,22 @@ export default function POSPage() {
                     placeholder="Draft title (e.g. WP-1234)"
                     value={draftTitle}
                     onChange={(e) => setDraftTitle(e.target.value)}
-                    className="flex-1 p-2 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-amber-500"
+                    className="flex-1 p-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-amber-500"
                   />
                   <button
                     onClick={handleSaveDraft}
-                    className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs whitespace-nowrap"
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap"
                   >
-                    <BookmarkPlus className="w-3.5 h-3.5" /> Save Draft
+                    <BookmarkPlus className="w-4 h-4" /> Save Draft
                   </button>
                 </div>
               </div>
 
               <button
                 onClick={handleCheckoutAndPrint}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-sm text-xs flex items-center justify-center gap-2 mt-2"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-sm text-sm sm:text-base flex items-center justify-center gap-2 mt-2"
               >
-                <Printer className="w-4 h-4" />
+                <Printer className="w-5 h-5" />
                 <span>Pay & Print Receipt</span>
               </button>
             </div>
@@ -744,33 +742,33 @@ export default function POSPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl max-w-lg w-full shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
-              <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
-                <FolderOpen className="w-4 h-4 text-amber-500" /> Saved Bill Drafts ({drafts.length})
+              <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-amber-500" /> Saved Bill Drafts ({drafts.length})
               </h3>
               <button 
                 onClick={() => setShowDraftsModal(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-2.5">
               {drafts.length === 0 ? (
-                <p className="text-center text-gray-400 py-10 text-xs">No draft bills available.</p>
+                <p className="text-center text-gray-400 py-10 text-sm">No draft bills available.</p>
               ) : (
                 drafts.map((d) => {
                   const draftTotal = d.cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0) - (d.discount || 0);
                   return (
                     <div 
                       key={d.id} 
-                      className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:border-amber-400 transition"
+                      className="p-4 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:border-amber-400 transition"
                     >
                       <div className="space-y-1">
-                        <h4 className="font-bold text-xs text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                        <h4 className="font-bold text-sm text-gray-800 dark:text-gray-100 flex items-center gap-2">
                           🚗 {d.title}
                         </h4>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           Items: <span className="font-semibold">{d.cart.length}</span> | Net Total: <span className="font-bold text-emerald-600 dark:text-emerald-400">LKR {draftTotal.toLocaleString()}</span>
                         </p>
                       </div>
@@ -778,13 +776,13 @@ export default function POSPage() {
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                         <button
                           onClick={() => handleLoadDraft(d)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition shadow-xs"
                         >
                           Load Bill File
                         </button>
                         <button
                           onClick={(e) => handleDeleteDraft(d.id!, e)}
-                          className="bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 p-1.5 rounded-xl text-xs transition"
+                          className="bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 p-2 rounded-xl text-xs transition"
                           title="Delete Draft"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -804,20 +802,20 @@ export default function POSPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl max-w-sm w-full shadow-xl space-y-4">
             <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
-              <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+              <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-blue-600" /> Admin Invoice Settings
               </h3>
               <button 
                 onClick={() => setShowAdminModal(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {!isAdminAuthenticated ? (
               <form onSubmit={handleAdminLogin} className="space-y-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                   Please enter any <strong>Admin account password</strong> to modify this setting.
                 </p>
                 <input
@@ -825,22 +823,22 @@ export default function POSPage() {
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
                   placeholder="Enter Admin Password..."
-                  className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
                 />
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-xs"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-xs"
                 >
                   Verify Admin
                 </button>
               </form>
             ) : (
               <div className="space-y-3">
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                <p className="text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                   ✓ Admin Verified Successfully!
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                   Enter the next starting invoice number (Current number: #{currentInvoiceNo}):
                 </p>
                 <input
@@ -848,21 +846,21 @@ export default function POSPage() {
                   value={newStartingInvoice}
                   onChange={(e) => setNewStartingInvoice(e.target.value)}
                   placeholder={`Current: ${currentInvoiceNo}`}
-                  className="w-full p-2.5 border border-blue-300 dark:border-blue-600 rounded-xl text-xs font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-blue-300 dark:border-blue-600 rounded-xl text-sm font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
                 />
                 <div className="flex gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => setShowAdminModal(false)}
-                    className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded-xl text-xs font-bold"
+                    className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl text-xs sm:text-sm font-bold"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleUpdateStartingInvoice}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold shadow-xs"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-xs"
                   >
                     Update Number
                   </button>
