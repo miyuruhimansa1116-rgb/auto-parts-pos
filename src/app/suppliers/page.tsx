@@ -66,110 +66,110 @@ export default function SuppliersPage() {
     <div className="p-6 max-w-[1200px] mx-auto font-sans space-y-6 min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors">
       <div className="flex items-center gap-3">
         <Building2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-        <h1 className="text-2xl font-bold">Supplier Management</h1>
+        <h1 className="text-3xl font-bold">Supplier Management</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Form - Left Side */}
-        <form onSubmit={handleAddSupplier} className="lg:col-span-4 bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4 h-fit">
+        <form onSubmit={handleAddSupplier} className="lg:col-span-4 bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-5 h-fit">
           <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">
             <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h2 className="font-bold text-lg text-gray-800 dark:text-gray-200">Add New Supplier</h2>
+            <h2 className="font-bold text-xl text-gray-800 dark:text-gray-200">Add New Supplier</h2>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
-              <User className="w-3.5 h-3.5" /> Supplier Name
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <User className="w-4 h-4" /> Supplier Name
             </label>
             <input
               type="text"
               placeholder="e.g. Auto City Traders"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-2.5 border rounded-lg text-xs font-semibold bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 border rounded-lg text-sm font-medium bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
-              <Phone className="w-3.5 h-3.5" /> Phone Number
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <Phone className="w-4 h-4" /> Phone Number
             </label>
             <input
               type="text"
               placeholder="e.g. 0771234567"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full p-2.5 border rounded-lg text-xs font-semibold bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 border rounded-lg text-sm font-medium bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" /> Address
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <MapPin className="w-4 h-4" /> Address
             </label>
             <textarea
               placeholder="e.g. Main Street, Puttalam"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full p-2.5 border rounded-lg text-xs font-semibold bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full p-3 border rounded-lg text-sm font-medium bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               rows={3}
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition shadow-sm text-xs flex items-center justify-center gap-2"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-sm text-sm flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" /> Save Supplier
           </button>
         </form>
 
         {/* Suppliers List - Right Side */}
-        <div className="lg:col-span-8 bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
+        <div className="lg:col-span-8 bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
-            <h2 className="font-bold text-lg text-gray-800 dark:text-gray-200">
-              Suppliers List <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({suppliers.length})</span>
+            <h2 className="font-bold text-xl text-gray-800 dark:text-gray-200">
+              Suppliers List <span className="text-base font-normal text-gray-500 dark:text-gray-400">({suppliers.length})</span>
             </h2>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
-                  <th className="p-3">Supplier Name</th>
-                  <th className="p-3">Phone</th>
-                  <th className="p-3">Address</th>
-                  <th className="p-3 text-center">Actions</th>
+                  <th className="p-3.5 font-bold">Supplier Name</th>
+                  <th className="p-3.5 font-bold">Phone</th>
+                  <th className="p-3.5 font-bold">Address</th>
+                  <th className="p-3.5 font-bold text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-8 text-gray-400 dark:text-gray-500">
-                      <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> Loading...
+                    <td colSpan={4} className="text-center py-10 text-gray-400 dark:text-gray-500">
+                      <div className="flex items-center justify-center gap-2 text-base">
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-600" /> Loading...
                       </div>
                     </td>
                   </tr>
                 ) : suppliers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-10 text-gray-400 dark:text-gray-500">
+                    <td colSpan={4} className="text-center py-12 text-gray-400 dark:text-gray-500 text-base">
                       No suppliers found.
                     </td>
                   </tr>
                 ) : (
                   suppliers.map((s) => (
                     <tr key={s.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      <td className="p-3 font-bold text-gray-800 dark:text-gray-200">{s.name}</td>
-                      <td className="p-3 text-gray-600 dark:text-gray-400">{s.phone || "-"}</td>
-                      <td className="p-3 text-gray-600 dark:text-gray-400">{s.address || "-"}</td>
-                      <td className="p-3 text-center">
+                      <td className="p-3.5 font-bold text-gray-800 dark:text-gray-200">{s.name}</td>
+                      <td className="p-3.5 text-gray-700 dark:text-gray-300">{s.phone || "-"}</td>
+                      <td className="p-3.5 text-gray-700 dark:text-gray-300">{s.address || "-"}</td>
+                      <td className="p-3.5 text-center">
                         <button
                           onClick={() => handleDelete(s.id)}
-                          className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 px-2 py-1 rounded transition"
+                          className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 px-3 py-1.5 rounded transition text-sm"
                         >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                          <Trash2 className="w-4 h-4" /> Delete
                         </button>
                       </td>
                     </tr>
