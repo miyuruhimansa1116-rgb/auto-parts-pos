@@ -1,10 +1,9 @@
 // src/app/pos/page.tsx
-"use intl"; // හෝ "use client"; (ඔබේ වර්තමාන කේතයේ ඇති පරිදි)
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, runTransaction, getDoc, setDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, runTransaction, getDoc, setDoc, getDocs } from "firebase/firestore";
 import { Product } from "@/types/product";
 import ReceiptTemplate from "@/components/ReceiptTemplate";
 import { 
@@ -20,7 +19,11 @@ import {
   BookmarkPlus,
   FolderOpen,
   Trash2,
-  X
+  X,
+  Calendar,
+  AlertCircle,
+  ShieldCheck,
+  Settings
 } from "lucide-react";
 
 interface CartItem extends Product {
@@ -52,13 +55,26 @@ export default function POSPage() {
   const [customerName, setCustomerName] = useState<string>(""); 
   const [currentInvoiceNo, setCurrentInvoiceNo] = useState<number>(0);
 
+  // Admin & Invoice Counter States
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [newStartingInvoice, setNewStartingInvoice] = useState("");
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+
+  // Cashier Error Message State
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  // Custom Date States
+  const [enableCustomDate, setEnableCustomDate] = useState<boolean>(false);
+  const [customBillDate, setCustomBillDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+
   // Draft States
   const [draftTitle, setDraftTitle] = useState("");
   const [showDraftsModal, setShowDraftsModal] = useState(false);
-  // මොබයිල් සඳහා ටැබ් මාරු කිරීමට (products හෝ cart/billing බලන්න)
   const [activeTab, setActiveTab] = useState<"products" | "billing">("products");
 
-  // ඔෆ්ලයින් සිදු කළ සේල්ස් ෆයර්බේස් වෙත යැවීම සහ සින්ක් කිරීම
   const syncOfflineSales = async () => {
     if (!navigator.onLine) return;
     try {
@@ -172,7 +188,7 @@ export default function POSPage() {
           alert("This item is out of stock!");
           return prevCart;
         }
-        return [...prevCart, { ...product, cartQty: 1 }];
+        return [{ ...product, cartQty: 1 }, ...prevCart];
       }
     });
   };
@@ -212,7 +228,7 @@ export default function POSPage() {
         title: titleToSave,
         cart,
         discount,
-        createdAt: new Date(),
+        createdAt: enableCustomDate ? new Date(customBillDate) : new Date(),
       });
       alert("Bill saved as Draft!");
       setDraftTitle("");
@@ -226,7 +242,7 @@ export default function POSPage() {
     setDiscount(draft.discount || 0);
     setCustomerName(draft.title || "");
     setShowDraftsModal(false);
-    setActiveTab("billing"); // ඩ්‍රාෆ්ට් එකක් ලෝඩ් කළ විට බිල්ින් ටැබ් එකට මාරු වේ
+    setActiveTab("billing"); 
   };
 
   const handleDeleteDraft = async (id: string, e: React.MouseEvent) => {
@@ -240,9 +256,73 @@ export default function POSPage() {
     }
   };
 
+  // Admin Verification & Invoice Number Update Logic
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminPassword.trim()) {
+      alert("Please enter the password!");
+      return;
+    }
+
+    try {
+      const querySnapshot = await getDocs(collection(db, "systemUsers"));
+      let authenticated = false;
+
+      querySnapshot.forEach((docSnap) => {
+        const userData = docSnap.data();
+        if (userData.role === "admin" && userData.password === adminPassword.trim()) {
+          authenticated = true;
+        }
+      });
+
+      if (authenticated) {
+        setIsAdminAuthenticated(true);
+        setAdminPassword("");
+      } else {
+        alert("Incorrect password or you do not have admin privileges!");
+      }
+    } catch (error) {
+      console.error("Error verifying admin:", error);
+      alert("An error occurred during verification.");
+    }
+  };
+
+  const handleUpdateStartingInvoice = async () => {
+    const parsedNo = parseInt(newStartingInvoice);
+    if (isNaN(parsedNo) || parsedNo < 0) {
+      alert("Please enter a valid invoice number!");
+      return;
+    }
+
+    try {
+      setCurrentInvoiceNo(parsedNo);
+      localStorage.setItem("pos_invoice_no", parsedNo.toString());
+
+      if (navigator.onLine) {
+        const counterRef = doc(db, "settings", "invoiceCounter");
+        await setDoc(counterRef, { currentNo: parsedNo }, { merge: true });
+      }
+
+      alert(`Invoice starting number successfully changed to #${parsedNo}!`);
+      setNewStartingInvoice("");
+      setShowAdminModal(false);
+      setIsAdminAuthenticated(false);
+    } catch (error) {
+      console.error("Error updating invoice counter:", error);
+      alert("An error occurred while updating the number.");
+    }
+  };
+
   const handleCheckoutAndPrint = async () => {
+    setCheckoutError(null);
+
     if (cart.length === 0) {
       alert("Cart is empty!");
+      return;
+    }
+
+    if (cashPaid < netTotal) {
+      setCheckoutError(`Cash paid amount is less than the net total (Rs. ${netTotal.toLocaleString()})! Please enter a valid amount.`);
       return;
     }
 
@@ -254,11 +334,13 @@ export default function POSPage() {
     setCurrentInvoiceNo(nextInvoiceNo);
 
     const formattedInvoiceNo = `SAP-${assignedInvoiceNo}`;
+    const finalDateObj = enableCustomDate ? new Date(customBillDate) : new Date();
+
     window.print();
 
     const saleData = {
       invoiceNo: formattedInvoiceNo,
-      createdAt: new Date().toISOString(),
+      createdAt: finalDateObj.toISOString(),
       customerName: finalCustomerName,
       items: cart,
       subTotal,
@@ -290,7 +372,7 @@ export default function POSPage() {
 
         await addDoc(collection(db, "sales"), {
           ...saleData,
-          createdAt: new Date(),
+          createdAt: finalDateObj,
         });
       } catch (error) {
         saveToOfflineQueue(saleData);
@@ -316,27 +398,35 @@ export default function POSPage() {
   };
 
   const filteredProducts = useMemo(() => {
-    return products
-      .filter((p) => {
-        const matchesSearch =
-          p.name.toLowerCase().includes(search.toLowerCase()) ||
-          p.partNumber.toLowerCase().includes(search.toLowerCase());
-        const matchesCategory = selectedCategory === "all" || p.category === selectedCategory;
-        const matchesBrand = selectedBrand === "all" || p.brand === selectedBrand;
-        return matchesSearch && matchesCategory && matchesBrand;
-      })
-      .sort((a, b) => {
-        if (sortBy === "price-low") return (a.sellingPrice || 0) - (b.sellingPrice || 0);
-        if (sortBy === "price-high") return (b.sellingPrice || 0) - (a.sellingPrice || 0);
-        if (sortBy === "low-stock") return (a.stockQty || 0) - (b.stockQty || 0);
-        if (sortBy === "name-asc") return (a.name || "").localeCompare(b.name || "");
-        if (sortBy === "name-desc") return (b.name || "").localeCompare(a.name || "");
-         
-        const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-        const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
-        return timeB - timeA;
-      });
-  }, [products, search, selectedCategory, selectedBrand, sortBy]);
+    const filtered = products.filter((p) => {
+      const matchesSearch =
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.partNumber.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = selectedCategory === "all" || p.category === selectedCategory;
+      const matchesBrand = selectedBrand === "all" || p.brand === selectedBrand;
+      return matchesSearch && matchesCategory && matchesBrand;
+    });
+
+    return filtered.sort((a, b) => {
+      const cartItemA = cart.find(item => item.id === a.id);
+      const cartItemB = cart.find(item => item.id === b.id);
+      const qtyA = cartItemA ? cartItemA.cartQty : 0;
+      const qtyB = cartItemB ? cartItemB.cartQty : 0;
+
+      if (qtyA > 0 && qtyB === 0) return -1;
+      if (qtyA === 0 && qtyB > 0) return 1;
+
+      if (sortBy === "price-low") return (a.sellingPrice || 0) - (b.sellingPrice || 0);
+      if (sortBy === "price-high") return (b.sellingPrice || 0) - (a.sellingPrice || 0);
+      if (sortBy === "low-stock") return (a.stockQty || 0) - (b.stockQty || 0);
+      if (sortBy === "name-asc") return (a.name || "").localeCompare(b.name || "");
+      if (sortBy === "name-desc") return (b.name || "").localeCompare(a.name || "");
+       
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [products, search, selectedCategory, selectedBrand, sortBy, cart]);
 
   const currentInvoiceData = {
     invoiceNo: `SAP-${currentInvoiceNo}`,
@@ -348,7 +438,7 @@ export default function POSPage() {
     netTotal: netTotal,
     cashPaid: cashPaid,
     balance: balance,
-    createdAt: new Date(),
+    createdAt: enableCustomDate ? new Date(customBillDate) : new Date(),
   };
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.cartQty, 0);
@@ -373,16 +463,32 @@ export default function POSPage() {
             </div>
           </div>
           
-          <button
-            onClick={() => setShowDraftsModal(true)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-4 py-2.5 rounded-xl text-xs font-bold transition hover:bg-amber-100 shadow-xs"
-          >
-            <FolderOpen className="w-4 h-4" />
-            <span>Saved Drafts ({drafts.length})</span>
-          </button>
+          {/* Drafts Button & Admin Invoice Settings Button */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setShowDraftsModal(true)}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-4 py-2.5 rounded-xl text-xs font-bold transition hover:bg-amber-100 shadow-xs"
+            >
+              <FolderOpen className="w-4 h-4" />
+              <span>Saved Drafts ({drafts.length})</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setShowAdminModal(true);
+                setIsAdminAuthenticated(false);
+                setAdminPassword("");
+              }}
+              className="flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold transition hover:bg-slate-200 shadow-xs"
+              title="Admin: Change Starting Invoice No"
+            >
+              <Settings className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="hidden sm:inline">Invoice Setup</span>
+            </button>
+          </div>
         </div>
 
-        {/* Mobile View Switcher (Bottom / Top Bar සඳහා දුරකථන පෙනුම වැඩිදියුණු කිරීමට) */}
+        {/* Mobile View Switcher */}
         <div className="flex lg:hidden grid-cols-2 gap-2 bg-gray-200 dark:bg-gray-800 p-1 rounded-xl">
           <button
             onClick={() => setActiveTab("products")}
@@ -466,17 +572,22 @@ export default function POSPage() {
               </div>
             </div>
 
-            {/* Product Grid - දුරකථන සඳහා cols-2 සහ ලොකු තිර සඳහා වැඩි ප්‍රමාණයක් */}
+            {/* Product Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 max-h-[calc(100vh-280px)] sm:max-h-[500px] overflow-y-auto pr-1">
               {filteredProducts.map((product) => {
                 const cartItem = cart.find((item) => item.id === product.id);
                 const currentQty = cartItem ? cartItem.cartQty : 0;
+                const isInCart = currentQty > 0;
 
                 return (
                   <div
                     key={product.id}
                     onClick={(e) => handleIncreaseQty(product, e)}
-                    className="p-2.5 sm:p-3.5 border border-gray-100 dark:border-gray-700 rounded-2xl text-left hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/25 dark:hover:bg-blue-950/20 transition bg-gray-50/50 dark:bg-gray-700/40 flex flex-col justify-between cursor-pointer select-none"
+                    className={`p-2.5 sm:p-3.5 border rounded-2xl text-left transition bg-gray-50/50 dark:bg-gray-700/40 flex flex-col justify-between cursor-pointer select-none ${
+                      isInCart 
+                        ? "border-red-500 bg-red-50/60 dark:bg-red-950/40 shadow-xs" 
+                        : "border-gray-100 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/25 dark:hover:bg-blue-950/20"
+                    }`}
                   >
                     <div>
                       {product.imageUrl ? (
@@ -496,19 +607,19 @@ export default function POSPage() {
                       <div className="flex justify-between items-center">
                         <span className="font-black text-emerald-600 dark:text-emerald-400 text-[11px] sm:text-xs">LKR {(product.sellingPrice || 0).toLocaleString()}</span>
                          
-                        <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1 rounded-lg shadow-2xs" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-lg shadow-2xs" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={(e) => handleDecreaseQty(product, e)}
-                            className="w-5 h-5 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 font-bold rounded-md flex items-center justify-center text-[10px]"
+                            className="w-6 h-6 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 font-bold rounded-md flex items-center justify-center text-xs hover:bg-red-100 transition"
                           >
-                            <Minus className="w-3 h-3" />
+                            <Minus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="text-[10px] sm:text-[11px] font-bold px-1 text-gray-700 dark:text-gray-200 min-w-[14px] text-center">{currentQty}</span>
+                          <span className="text-xs font-black px-1.5 text-gray-700 dark:text-gray-200 min-w-[18px] text-center">{currentQty}</span>
                           <button
                             onClick={(e) => handleIncreaseQty(product, e)}
-                            className="w-5 h-5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-bold rounded-md flex items-center justify-center text-[10px]"
+                            className="w-6 h-6 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-bold rounded-md flex items-center justify-center text-xs hover:bg-emerald-100 transition"
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -523,7 +634,9 @@ export default function POSPage() {
           <div className={`bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex flex-col justify-between space-y-4 ${activeTab === "products" ? "hidden lg:flex" : "flex"}`}>
             
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white max-h-[300px] sm:max-h-[350px] overflow-y-auto shadow-xs">
-              <ReceiptTemplate invoice={currentInvoiceData} />
+              <ReceiptTemplate 
+                invoice={currentInvoiceData} 
+              />
             </div>
 
             <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3 bg-gray-50/50 dark:bg-gray-700/30 p-3 sm:p-4 rounded-xl">
@@ -538,7 +651,32 @@ export default function POSPage() {
                 />
               </div>
 
-              <div className="flex justify-between items-center text-xs">
+              {/* Custom Date Section */}
+              <div className="space-y-2 pt-1 border-t border-gray-200 dark:border-gray-700">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-600 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={enableCustomDate}
+                    onChange={(e) => setEnableCustomDate(e.target.checked)}
+                    className="w-3.5 h-3.5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  />
+                  <span>Change Bill Date</span>
+                </label>
+
+                {enableCustomDate && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-500" />
+                    <input
+                      type="date"
+                      value={customBillDate}
+                      onChange={(e) => setCustomBillDate(e.target.value)}
+                      className="w-full p-1.5 border border-blue-300 dark:border-blue-700 rounded-xl text-xs font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center text-xs pt-1">
                 <span className="text-gray-500 dark:text-gray-400 font-semibold">Discount (LKR):</span>
                 <input
                   type="number"
@@ -554,11 +692,22 @@ export default function POSPage() {
                 <input
                   type="number"
                   value={cashPaid || ""}
-                  onChange={(e) => setCashPaid(Number(e.target.value))}
+                  onChange={(e) => {
+                    setCashPaid(Number(e.target.value));
+                    if (checkoutError) setCheckoutError(null);
+                  }}
                   placeholder="0"
                   className="w-32 p-1.5 border border-gray-200 dark:border-gray-600 rounded-xl text-right font-black bg-white dark:bg-gray-700 text-sm text-emerald-600 dark:text-emerald-400 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
+              {/* Cashier Error Message Box */}
+              {checkoutError && (
+                <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-600 dark:text-rose-400 text-[11px] font-bold flex items-center gap-2 animate-shake">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{checkoutError}</span>
+                </div>
+              )}
 
               <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
                 <div className="flex gap-2">
@@ -646,6 +795,80 @@ export default function POSPage() {
                 })
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Verification & Invoice Number Setup Modal */}
+      {showAdminModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl max-w-sm w-full shadow-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
+              <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-blue-600" /> Admin Invoice Settings
+              </h3>
+              <button 
+                onClick={() => setShowAdminModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {!isAdminAuthenticated ? (
+              <form onSubmit={handleAdminLogin} className="space-y-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Please enter any <strong>Admin account password</strong> to modify this setting.
+                </p>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Enter Admin Password..."
+                  className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-xs"
+                >
+                  Verify Admin
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                  ✓ Admin Verified Successfully!
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Enter the next starting invoice number (Current number: #{currentInvoiceNo}):
+                </p>
+                <input
+                  type="number"
+                  value={newStartingInvoice}
+                  onChange={(e) => setNewStartingInvoice(e.target.value)}
+                  placeholder={`Current: ${currentInvoiceNo}`}
+                  className="w-full p-2.5 border border-blue-300 dark:border-blue-600 rounded-xl text-xs font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminModal(false)}
+                    className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded-xl text-xs font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUpdateStartingInvoice}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold shadow-xs"
+                  >
+                    Update Number
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
