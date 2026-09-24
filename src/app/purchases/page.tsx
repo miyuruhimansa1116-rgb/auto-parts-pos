@@ -39,6 +39,7 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  BellRing,
 } from "lucide-react";
 
 interface ItemOption {
@@ -61,10 +62,12 @@ interface PurchaseItem {
   qty: number;
   costPrice: number;
   sellingPrice: number;
+  lowStockAlert?: number; // Low stock warning alert limit එක සඳහා
   totalCost: number;
   imageUrl?: string;
   isFavorite?: boolean;
   createdAt: Timestamp | Date | string;
+  updatedAt?: Timestamp | Date | string;
 }
 
 export default function PurchasesPage() {
@@ -88,16 +91,79 @@ export default function PurchasesPage() {
     localStorage.setItem("purchases_show_form", JSON.stringify(showForm));
   }, [showForm]);
 
-  // Form States
-  const [selectedSupplier, setSelectedSupplier] = useState("");
-  const [partNumber, setPartNumber] = useState("");
-  const [itemName, setItemName] = useState("");
-  const [category, setCategory] = useState("");
-  const [brand, setBrand] = useState("");
-  const [qty, setQty] = useState<number | "">("");
-  const [costPrice, setCostPrice] = useState<number | "">("");
-  const [sellingPrice, setSellingPrice] = useState<number | "">("");
-  const [isFavorite, setIsFavorite] = useState(false);
+  // Form States with localStorage persistence
+  const [selectedSupplier, setSelectedSupplier] = useState<string>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("form_supplier") || "";
+    return "";
+  });
+  const [partNumber, setPartNumber] = useState<string>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("form_partNumber") || "";
+    return "";
+  });
+  const [itemName, setItemName] = useState<string>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("form_itemName") || "";
+    return "";
+  });
+  const [category, setCategory] = useState<string>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("form_category") || "";
+    return "";
+  });
+  const [brand, setBrand] = useState<string>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("form_brand") || "";
+    return "";
+  });
+  const [qty, setQty] = useState<number | "">(() => {
+    if (typeof window !== "undefined") {
+      const val = localStorage.getItem("form_qty");
+      return val !== null && val !== "" ? Number(val) : "";
+    }
+    return "";
+  });
+  const [costPrice, setCostPrice] = useState<number | "">(() => {
+    if (typeof window !== "undefined") {
+      const val = localStorage.getItem("form_costPrice");
+      return val !== null && val !== "" ? Number(val) : "";
+    }
+    return "";
+  });
+  const [sellingPrice, setSellingPrice] = useState<number | "">(() => {
+    if (typeof window !== "undefined") {
+      const val = localStorage.getItem("form_sellingPrice");
+      return val !== null && val !== "" ? Number(val) : "";
+    }
+    return "";
+  });
+  // Low Stock Alert State එක එකතු කිරීම
+  const [lowStockAlert, setLowStockAlert] = useState<number | "">(() => {
+    if (typeof window !== "undefined") {
+      const val = localStorage.getItem("form_lowStockAlert");
+      return val !== null && val !== "" ? Number(val) : 5; // Default අගය 5 ලෙස හැදීමට හැක
+    }
+    return 5;
+  });
+
+  const [isFavorite, setIsFavorite] = useState<boolean>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("form_isFavorite") === "true";
+    return false;
+  });
+
+  // Save form states to localStorage on change
+  useEffect(() => {
+    localStorage.setItem("form_supplier", selectedSupplier);
+    localStorage.setItem("form_partNumber", partNumber);
+    localStorage.setItem("form_itemName", itemName);
+    localStorage.setItem("form_category", category);
+    localStorage.setItem("form_brand", brand);
+    localStorage.setItem("form_qty", qty.toString());
+    localStorage.setItem("form_costPrice", costPrice.toString());
+    localStorage.setItem("form_sellingPrice", sellingPrice.toString());
+    localStorage.setItem("form_lowStockAlert", lowStockAlert.toString());
+    localStorage.setItem("form_isFavorite", String(isFavorite));
+  }, [selectedSupplier, partNumber, itemName, category, brand, qty, costPrice, sellingPrice, lowStockAlert, isFavorite]);
+
+  // Search inputs for Category and Brand dropdowns
+  const [categorySearch, setCategorySearch] = useState("");
+  const [brandSearch, setBrandSearch] = useState("");
 
   // Error Message State
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -107,14 +173,35 @@ export default function PurchasesPage() {
   const [uploading, setUploading] = useState(false);
 
   // Edit Mode States
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("form_editingId") || null;
+    return null;
+  });
   const [oldQty, setOldQty] = useState<number>(0);
 
-  // Filter & Search & Sort States
+  useEffect(() => {
+    if (editingId) {
+      localStorage.setItem("form_editingId", editingId);
+    } else {
+      localStorage.removeItem("form_editingId");
+    }
+  }, [editingId]);
+
+  // Filter & Search & Sort States with localStorage persistence
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterBrand, setFilterBrand] = useState("all");
-  const [sortBy, setSortBy] = useState("latest");
+  
+  const [sortBy, setSortBy] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("purchases_sort_by") || "modified";
+    }
+    return "modified";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("purchases_sort_by", sortBy);
+  }, [sortBy]);
 
   const supplierSelectRef = useRef<HTMLSelectElement | null>(null);
   const lastFocusedInputRef = useRef<HTMLElement | null>(null);
@@ -210,11 +297,30 @@ export default function PurchasesPage() {
     setQty("");
     setCostPrice("");
     setSellingPrice("");
+    setLowStockAlert(5);
     setIsFavorite(false);
     setImageFile(null);
-    setCurrentImageUrl("");
+    setImageUrlState("");
     setPurchaseDate(getTodayDateStr());
     setErrorMessage(null);
+    setCategorySearch("");
+    setBrandSearch("");
+    
+    localStorage.removeItem("form_supplier");
+    localStorage.removeItem("form_partNumber");
+    localStorage.removeItem("form_itemName");
+    localStorage.removeItem("form_category");
+    localStorage.removeItem("form_brand");
+    localStorage.removeItem("form_qty");
+    localStorage.removeItem("form_costPrice");
+    localStorage.removeItem("form_sellingPrice");
+    localStorage.removeItem("form_lowStockAlert");
+    localStorage.removeItem("form_isFavorite");
+    localStorage.removeItem("form_editingId");
+  };
+
+  const setImageUrlState = (url: string) => {
+    setCurrentImageUrl(url);
   };
 
   const handleEditClick = (p: PurchaseItem) => {
@@ -229,6 +335,7 @@ export default function PurchasesPage() {
     setQty(p.qty ?? "");
     setCostPrice(p.costPrice ?? "");
     setSellingPrice(p.sellingPrice ?? "");
+    setLowStockAlert(p.lowStockAlert ?? 5);
     setIsFavorite(p.isFavorite || false);
     setCurrentImageUrl(p.imageUrl || "");
     setImageFile(null);
@@ -338,6 +445,8 @@ export default function PurchasesPage() {
 
       const totalCost = Number(qty) * Number(costPrice);
       const finalBrand = brand && brand.trim() !== "" ? brand.trim() : "No Brand";
+      const finalLowStockAlert = lowStockAlert === "" ? 5 : Number(lowStockAlert);
+      const nowTimestamp = new Date();
 
       const purchaseData = {
         supplierName: selectedSupplier,
@@ -348,10 +457,12 @@ export default function PurchasesPage() {
         qty: Number(qty),
         costPrice: Number(costPrice),
         sellingPrice: Number(sellingPrice),
+        lowStockAlert: finalLowStockAlert,
         totalCost,
         imageUrl,
         isFavorite,
         createdAt: finalDate,
+        updatedAt: nowTimestamp,
       };
 
       if (editingId) {
@@ -370,11 +481,12 @@ export default function PurchasesPage() {
             stockQty: increment(qtyDiff),
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
+            lowStockAlert: finalLowStockAlert,
             category: category || prodDoc.data().category,
             brand: finalBrand,
             isFavorite,
             ...(imageUrl ? { imageUrl } : {}),
-            updatedAt: new Date(),
+            updatedAt: nowTimestamp,
           });
         }
 
@@ -395,11 +507,12 @@ export default function PurchasesPage() {
             stockQty: increment(Number(qty)),
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
+            lowStockAlert: finalLowStockAlert,
             category: category || prodDoc.data().category,
             brand: finalBrand,
             isFavorite,
             ...(imageUrl ? { imageUrl } : {}),
-            updatedAt: new Date(),
+            updatedAt: nowTimestamp,
           });
         } else {
           await setDoc(doc(db, "products", partNumber.trim()), {
@@ -410,9 +523,11 @@ export default function PurchasesPage() {
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
             stockQty: Number(qty),
+            lowStockAlert: finalLowStockAlert,
             imageUrl,
             isFavorite,
             createdAt: finalDate,
+            updatedAt: nowTimestamp,
           });
         }
 
@@ -462,9 +577,29 @@ export default function PurchasesPage() {
           return new Date(dateVal).getTime();
         };
 
+        if (sortBy === "modified") {
+          const timeB = getTime(b.updatedAt) || getTime(b.createdAt);
+          const timeA = getTime(a.updatedAt) || getTime(a.createdAt);
+          return timeB - timeA;
+        }
+
+        if (sortBy === "latest") {
+          const timeB = getTime(b.createdAt);
+          const timeA = getTime(a.createdAt);
+          return timeB - timeA;
+        }
+
         return getTime(b.createdAt) - getTime(a.createdAt);
       });
   }, [purchases, searchQuery, filterCategory, filterBrand, sortBy]);
+
+  const filteredCategoriesForDropdown = useMemo(() => {
+    return categories.filter(c => c.name.toLowerCase().includes(categorySearch.toLowerCase()));
+  }, [categories, categorySearch]);
+
+  const filteredBrandsForDropdown = useMemo(() => {
+    return brands.filter(b => b.name.toLowerCase().includes(brandSearch.toLowerCase()));
+  }, [brands, brandSearch]);
 
   return (
     <div 
@@ -576,20 +711,6 @@ export default function PurchasesPage() {
                   ref={supplierSelectRef}
                   value={selectedSupplier}
                   onChange={(e) => setSelectedSupplier(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const formElements = e.currentTarget.form?.elements;
-                      if (formElements) {
-                        for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
-                            break;
-                          }
-                        }
-                      }
-                    }
-                  }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                   required
                 >
@@ -610,20 +731,6 @@ export default function PurchasesPage() {
                   type="date"
                   value={purchaseDate}
                   onChange={(e) => setPurchaseDate(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const formElements = e.currentTarget.form?.elements;
-                      if (formElements) {
-                        for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
-                            break;
-                          }
-                        }
-                      }
-                    }
-                  }}
                   className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 transition"
                 />
               </div>
@@ -638,20 +745,6 @@ export default function PurchasesPage() {
                     placeholder="e.g. H4-BULB"
                     value={partNumber}
                     onChange={(e) => setPartNumber(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const formElements = e.currentTarget.form?.elements;
-                        if (formElements) {
-                          for (let i = 0; i < formElements.length; i++) {
-                            if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                              (formElements[i + 1] as HTMLElement).focus();
-                              break;
-                            }
-                          }
-                        }
-                      }
-                    }}
                     className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                     required
                   />
@@ -665,20 +758,6 @@ export default function PurchasesPage() {
                     placeholder="e.g. LED Headlight"
                     value={itemName}
                     onChange={(e) => setItemName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const formElements = e.currentTarget.form?.elements;
-                        if (formElements) {
-                          for (let i = 0; i < formElements.length; i++) {
-                            if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                              (formElements[i + 1] as HTMLElement).focus();
-                              break;
-                            }
-                          }
-                        }
-                      }
-                    }}
                     className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                     required
                   />
@@ -689,92 +768,89 @@ export default function PurchasesPage() {
                 <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
                   <Layers className="w-3.5 h-3.5 text-blue-500" /> Category
                 </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const formElements = e.currentTarget.form?.elements;
-                      if (formElements) {
-                        for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
-                            break;
-                          }
-                        }
-                      }
-                    }
-                  }}
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                >
-                  <option value="">-- Select Category --</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-800/60 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 transition">
+                  <div className="relative border-b border-slate-200 dark:border-slate-800">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search category..."
+                      value={categorySearch}
+                      onChange={(e) => setCategorySearch(e.target.value)}
+                      className="w-full h-9 pl-8 pr-3 bg-transparent text-xs text-slate-800 dark:text-slate-200 outline-none"
+                    />
+                  </div>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full p-2.5 bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none cursor-pointer"
+                  >
+                    <option value="" className="dark:bg-slate-900">-- Select Category --</option>
+                    {filteredCategoriesForDropdown.map((c) => (
+                      <option key={c.id} value={c.name} className="dark:bg-slate-900">
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
                   <Tag className="w-3.5 h-3.5 text-purple-500" /> Brand (If blank, saved as No Brand)
                 </label>
-                <select
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const formElements = e.currentTarget.form?.elements;
-                      if (formElements) {
-                        for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
-                            break;
-                          }
-                        }
-                      }
-                    }
-                  }}
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                >
-                  <option value="">-- No Brand / Select Brand --</option>
-                  {brands.map((b) => (
-                    <option key={b.id} value={b.name}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-800/60 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 transition">
+                  <div className="relative border-b border-slate-200 dark:border-slate-800">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search brand..."
+                      value={brandSearch}
+                      onChange={(e) => setBrandSearch(e.target.value)}
+                      className="w-full h-9 pl-8 pr-3 bg-transparent text-xs text-slate-800 dark:text-slate-200 outline-none"
+                    />
+                  </div>
+                  <select
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    className="w-full p-2.5 bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none cursor-pointer"
+                  >
+                    <option value="" className="dark:bg-slate-900">-- No Brand / Select Brand --</option>
+                    {filteredBrandsForDropdown.map((b) => (
+                      <option key={b.id} value={b.name} className="dark:bg-slate-900">
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
-                  <Package className="w-3.5 h-3.5 text-blue-500" /> Quantity
-                </label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={qty}
-                  onChange={(e) => setQty(e.target.value === "" ? "" : Number(e.target.value))}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const formElements = e.currentTarget.form?.elements;
-                      if (formElements) {
-                        for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
-                            break;
-                          }
-                        }
-                      }
-                    }
-                  }}
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                    <Package className="w-3.5 h-3.5 text-blue-500" /> Quantity
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={qty}
+                    onChange={(e) => setQty(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                    required
+                  />
+                </div>
+                {/* Low Stock Warning Alert Field එක අලුතින් එකතු කරන ලදී */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                    <BellRing className="w-3.5 h-3.5 text-amber-500" /> Low Stock Alert Limit
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="5"
+                    value={lowStockAlert}
+                    onChange={(e) => setLowStockAlert(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
@@ -787,20 +863,6 @@ export default function PurchasesPage() {
                     placeholder="0"
                     value={costPrice}
                     onChange={(e) => setCostPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const formElements = e.currentTarget.form?.elements;
-                        if (formElements) {
-                          for (let i = 0; i < formElements.length; i++) {
-                            if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                              (formElements[i + 1] as HTMLElement).focus();
-                              break;
-                            }
-                          }
-                        }
-                      }
-                    }}
                     className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                     required
                   />
@@ -814,12 +876,6 @@ export default function PurchasesPage() {
                     placeholder="0"
                     value={sellingPrice}
                     onChange={(e) => setSellingPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        e.currentTarget.form?.requestSubmit();
-                      }
-                    }}
                     className="w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/60 transition"
                     required
                   />
@@ -832,20 +888,6 @@ export default function PurchasesPage() {
                   id="isFavorite"
                   checked={isFavorite}
                   onChange={(e) => setIsFavorite(e.target.checked)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const formElements = e.currentTarget.form?.elements;
-                      if (formElements) {
-                        for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
-                            break;
-                          }
-                        }
-                      }
-                    }
-                  }}
                   className="w-4 h-4 text-amber-600 rounded border-slate-300 dark:border-slate-700 focus:ring-amber-500 cursor-pointer"
                 />
                 <label htmlFor="isFavorite" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
@@ -861,20 +903,6 @@ export default function PurchasesPage() {
                   type="file"
                   accept="image/*"
                   onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const formElements = e.currentTarget.form?.elements;
-                      if (formElements) {
-                        for (let i = 0; i < formElements.length; i++) {
-                          if (formElements[i] === e.currentTarget && formElements[i + 1]) {
-                            (formElements[i + 1] as HTMLElement).focus();
-                            break;
-                          }
-                        }
-                      }
-                    }
-                  }}
                   className="w-full text-xs text-slate-600 dark:text-slate-300 focus:outline-none file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-600 dark:file:text-blue-400 file:cursor-pointer file:font-semibold"
                 />
                 
@@ -1016,7 +1044,8 @@ export default function PurchasesPage() {
                       onChange={(e) => setSortBy(e.target.value)}
                       className="p-2 pl-7 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-800/60 transition"
                     >
-                      <option value="latest">Sort: Latest (Default)</option>
+                      <option value="modified">Sort: Modified</option>
+                      <option value="latest">Sort: Latest</option>
                       <option value="name-asc">Sort: Name (A to Z)</option>
                       <option value="name-desc">Sort: Name (Z to A)</option>
                       <option value="price-low">Sort: Cost (Low to High)</option>
@@ -1036,7 +1065,7 @@ export default function PurchasesPage() {
                     <th className="p-3">Supplier</th>
                     <th className="p-3">Part # / Item</th>
                     <th className="p-3">Category / Brand</th>
-                    <th className="p-3 text-center">Qty</th>
+                    <th className="p-3 text-center">Qty / Alert</th>
                     <th className="p-3 text-right">Cost Price</th>
                     <th className="p-3 text-right">Total Cost</th>
                     <th className="p-3 text-center">Actions</th>
@@ -1086,6 +1115,7 @@ export default function PurchasesPage() {
                                  try {
                                    await updateDoc(doc(db, "purchases", p.id), {
                                      isFavorite: !p.isFavorite,
+                                     updatedAt: new Date(),
                                    });
                                  } catch (err) {
                                    console.error(err);
@@ -1099,7 +1129,7 @@ export default function PurchasesPage() {
                                 <span className="font-mono text-blue-600 dark:text-blue-400 font-bold block">
                                   {p.partNumber}
                                 </span>
-                                <span className="text-slate-700 dark:text-slate-300 font-medium">{p.itemName}</span>
+                                <span className="text-slate-700 dark:text-slate-300 font-medium">{p.itemName}  </span>
                               </div>
                             </div>
                           </td>
@@ -1111,7 +1141,12 @@ export default function PurchasesPage() {
                               {p.brand || "No Brand"}
                             </span>
                           </td>
-                          <td className="p-3 text-center font-extrabold text-slate-800 dark:text-slate-200">{p.qty}</td>
+                          <td className="p-3 text-center">
+                            <span className="font-extrabold text-slate-800 dark:text-slate-200 block">{p.qty}</span>
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold block" title="Low Stock Alert Limit">
+                              Alert: {p.lowStockAlert ?? 5}
+                            </span>
+                          </td>
                           <td className="p-3 text-right text-slate-600 dark:text-slate-300 whitespace-nowrap font-medium">
                             Rs. {p.costPrice?.toLocaleString()}
                           </td>
