@@ -1,3 +1,4 @@
+// src/app/login/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -35,7 +36,7 @@ export default function LoginPage() {
           localStorage.setItem("userRole", userData.role);
           localStorage.setItem("currentUser", userData.username);
 
-          alert(`Success! Logged in as ${userData.role === "admin" ? "Admin" : "Cashier"}.`);
+          alert(`Success! Logged in as ${userData.role === "admin" ? "Admin" : userData.role === "mock_admin" ? "Mock Admin" : "Cashier"}.`);
           router.push("/");
         } else {
           alert("Incorrect password! Please try again.");
@@ -52,50 +53,61 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-950 px-4 font-sans">
-      <div className="max-w-md w-full bg-white dark:bg-gray-900 p-8 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex p-3 bg-blue-50 dark:bg-blue-950/50 rounded-xl text-blue-600 dark:text-blue-400">
-            <ShieldCheck className="w-8 h-8" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 dark:from-gray-950 dark:via-slate-900 dark:to-gray-900 px-4 font-sans">
+      <div className="max-w-md w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl p-8 sm:p-10 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-2xl space-y-8">
+        
+        {/* Header Section with Icon/Logo */}
+        <div className="text-center space-y-3">
+          <div className="inline-flex p-4 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg shadow-blue-500/30">
+            <ShieldCheck className="w-9 h-9" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">System Login</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Auto Electrical & AC Service POS</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+            System Login
+          </h1>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            Sampath Auto Parts - POS & Inventory
+          </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        {/* Form Section */}
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 block mb-1">Username</label>
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-1.5 uppercase tracking-wider">
+              Username
+            </label>
             <div className="relative">
-              <User className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+              <User className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
               <input
                 type="text"
-                placeholder="Enter username"
+                placeholder="Enter your username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none"
+                className="w-full pl-11 pr-4 py-3.5 border border-gray-300 dark:border-gray-700 rounded-2xl text-sm bg-gray-50/50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium transition-all"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 block mb-1">Password</label>
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-1.5 uppercase tracking-wider">
+              Password
+            </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+              <Lock className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-10 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none"
+                className="w-full pl-11 pr-12 py-3.5 border border-gray-300 dark:border-gray-700 rounded-2xl text-sm bg-gray-50/50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium transition-all"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none"
+                className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
           </div>
@@ -103,17 +115,25 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 flex items-center justify-center gap-2.5"
           >
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Checking...
+                <Loader2 className="w-5 h-5 animate-spin" /> Checking...
               </>
             ) : (
               "Login to System"
             )}
           </button>
         </form>
+
+        {/* Footer info inside card */}
+        <div className="text-center pt-2 border-t border-gray-100 dark:border-gray-800/80">
+          <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+            Battuluoya Auto Electrical & AC System
+          </p>
+        </div>
+
       </div>
     </div>
   );
