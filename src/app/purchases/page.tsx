@@ -402,15 +402,15 @@ export default function PurchasesPage() {
     try {
       setUploading(true);
 
-      const trimmedPartNumber = partNumber.trim().toLowerCase();
-      const trimmedItemName = itemName.trim().toLowerCase();
+      const trimmedPartNumber = partNumber.trim();
+      const trimmedItemName = itemName.trim();
 
       const existingMatch = purchases.find((p) => {
         if (editingId && p.id === editingId) return false;
         
         return (
-          p.partNumber?.trim().toLowerCase() === trimmedPartNumber ||
-          p.itemName?.trim().toLowerCase() === trimmedItemName
+          p.partNumber?.trim().toLowerCase() === trimmedPartNumber.toLowerCase() ||
+          p.itemName?.trim().toLowerCase() === trimmedItemName.toLowerCase()
         );
       });
 
@@ -441,8 +441,8 @@ export default function PurchasesPage() {
 
       const purchaseData = {
         supplierName: selectedSupplier,
-        partNumber: partNumber.trim(),
-        itemName: itemName.trim(),
+        partNumber: trimmedPartNumber,
+        itemName: trimmedItemName,
         category: category || "General",
         brand: finalBrand,
         qty: Number(qty),
@@ -457,19 +457,22 @@ export default function PurchasesPage() {
       };
 
       if (editingId) {
+        // Purchases එක Update කිරීම
         await updateDoc(doc(db, "purchases", editingId), purchaseData);
 
         const qtyDiff = Number(qty) - oldQty;
         const q = query(
           collection(db, "products"),
-          where("partNumber", "==", partNumber.trim())
+          where("partNumber", "==", trimmedPartNumber)
         );
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
           const prodDoc = querySnapshot.docs[0];
+          // Products එකතුව ද Qty හැර අනෙකුත් සියලුම විස්තර (නම, මිල, කාණ්ඩය ආදී) සමඟ update වීම
           await updateDoc(doc(db, "products", prodDoc.id), {
-            stockQty: increment(qtyDiff),
+            name: trimmedItemName,
+            stockQty: increment(qtyDiff), // Qty වෙනස් වීම පමණක් මෙහිදී සමතුලිත වේ
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
             lowStockAlert: finalLowStockAlert,
@@ -481,20 +484,21 @@ export default function PurchasesPage() {
           });
         }
 
-        alert("Purchase record updated successfully!");
+        alert("Purchase record and product details updated successfully!");
         resetForm();
       } else {
-        await setDoc(doc(db, "purchases", partNumber.trim()), purchaseData);
+        await setDoc(doc(db, "purchases", trimmedPartNumber), purchaseData);
 
         const q = query(
           collection(db, "products"),
-          where("partNumber", "==", partNumber.trim())
+          where("partNumber", "==", trimmedPartNumber)
         );
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
           const prodDoc = querySnapshot.docs[0];
           await updateDoc(doc(db, "products", prodDoc.id), {
+            name: trimmedItemName,
             stockQty: increment(Number(qty)),
             costPrice: Number(costPrice),
             sellingPrice: Number(sellingPrice),
@@ -506,9 +510,9 @@ export default function PurchasesPage() {
             updatedAt: nowTimestamp,
           });
         } else {
-          await setDoc(doc(db, "products", partNumber.trim()), {
-            partNumber: partNumber.trim(),
-            name: itemName.trim(),
+          await setDoc(doc(db, "products", trimmedPartNumber), {
+            partNumber: trimmedPartNumber,
+            name: trimmedItemName,
             category: category || "General",
             brand: finalBrand,
             costPrice: Number(costPrice),
