@@ -11,6 +11,7 @@ import {
   Truck, 
   Building2, 
   Tags,
+  MapPin,
   BarChart3, 
   FileSpreadsheet, 
   UserPlus, 
@@ -27,6 +28,7 @@ const navLinks = [
   { href: "/purchases", label: "Purchases", icon: Truck },
   { href: "/suppliers", label: "Suppliers", icon: Building2 },
   { href: "/c&b", label: "Categories & Brands", icon: Tags },
+  { href: "/racks", label: "Rack Numbers", icon: MapPin },
   { href: "/reports", label: "Sales Reports", icon: BarChart3 },
   { href: "/reports/purchases", label: "Purchase Reports", icon: FileSpreadsheet },
   { href: "/admin/users", label: "Create Users", icon: UserPlus },
@@ -39,7 +41,8 @@ export default function Sidebar() {
   const [userRole, setUserRole] = useState("counter");
   const [username, setUsername] = useState("");
   const [mounted, setMounted] = useState(false);
-  const [isOpen, setIsOpen] = useState(false); // දුරකථන සඳහා මෙනු එක පෙන්වීමට/සඟවීමට
+  const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -49,7 +52,6 @@ export default function Sidebar() {
     setUsername(user);
   }, []);
 
-  // පිටුව මාරු වන විට දුරකථනයේ මෙනු එක ස්වයංක්‍රීයව වැසී යාමට
   useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
@@ -74,48 +76,50 @@ export default function Sidebar() {
   }
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      {/* Header & Logo Section */}
-      <div className="p-5 border-b border-gray-100 dark:border-gray-800/80 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/20">
-              S
+    <div className="flex flex-col h-full justify-between py-2">
+      {/* Top Section: Header & Navigation */}
+      <div className="flex flex-col space-y-1 px-2">
+        {/* Header & Logo Section */}
+        <div className="p-2.5 border-b border-slate-100 dark:border-slate-800/80 mb-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/25 text-sm">
+                S
+              </div>
+              <div className={`transition-all duration-300 whitespace-nowrap ${!isHovered ? "sm:opacity-0 sm:w-0 sm:overflow-hidden" : "opacity-100"}`}>
+                <h1 className="text-xs font-bold tracking-tight text-slate-900 dark:text-white">Sampath Auto Parts</h1>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">POS & Inventory System</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">Sampath Auto Parts</h1>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">POS & Inventory System</p>
-            </div>
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="sm:hidden p-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+              aria-label="Close Menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          {/* Mobile Close Button (ඉහළ දකුණු කෙළවරට සකසා ඇත) */}
-          <button 
-            onClick={() => setIsOpen(false)}
-            className="sm:hidden p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
-            aria-label="Close Menu"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
 
-        {/* User Info Badge */}
-        {username && (
-          <div className="bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-xl flex items-center justify-between text-xs border border-gray-200/60 dark:border-gray-700/50">
-            <span className="text-gray-600 dark:text-gray-300 truncate max-w-[150px]">
-              User: <strong className="text-blue-600 dark:text-blue-400 font-semibold">{username}</strong>
-            </span>
-            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase shadow-xs ${
-              userRole === "admin" 
-                ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20" 
-                : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-            }`}>
-              {userRole}
-            </span>
-          </div>
-        )}
+          {/* User Info Badge */}
+          {username && (
+            <div className={`mt-2 bg-slate-50/80 dark:bg-slate-800/40 px-2.5 py-1.5 rounded-xl flex items-center justify-between text-xs border border-slate-200/60 dark:border-slate-700/50 transition-all duration-300 ${!isHovered ? "sm:opacity-0 sm:h-0 sm:p-0 sm:overflow-hidden sm:border-0 sm:mt-0" : "opacity-100"}`}>
+              <span className="text-slate-600 dark:text-slate-300 truncate max-w-[120px] text-[11px]">
+                User: <strong className="text-blue-600 dark:text-blue-400 font-semibold">{username}</strong>
+              </span>
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase ${
+                userRole === "admin" 
+                  ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20" 
+                  : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+              }`}>
+                {userRole}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 p-3 space-y-1.5 text-sm font-medium overflow-y-auto">
+      {/* Navigation Links with Smooth Scrolling Support */}
+      <nav className="flex-1 px-2 space-y-1 text-xs font-medium overflow-y-auto overflow-x-hidden custom-scrollbar">
         {filteredLinks.map((link) => {
           const Icon = link.icon;
           const isActive = pathname === link.href;
@@ -124,30 +128,42 @@ export default function Sidebar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all duration-200 ${
+              title={!isHovered ? link.label : ""}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
                 isActive
-                  ? "bg-blue-600 text-white font-semibold shadow-sm shadow-blue-500/30"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-gray-200"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-sm shadow-blue-500/25"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-400 dark:text-gray-500"}`} />
-              <span>{link.label}</span>
+              <Icon className={`w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                isActive 
+                  ? "text-white" 
+                  : !isHovered 
+                    ? "text-blue-600 dark:text-blue-400" 
+                    : "text-slate-400 dark:text-slate-500 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+              }`} />
+              <span className={`transition-opacity duration-300 whitespace-nowrap text-[13px] ${!isHovered ? "sm:opacity-0 sm:w-0 sm:overflow-hidden" : "opacity-100"}`}>
+                {link.label}
+              </span>
             </Link>
           );
         })}
       </nav>
 
-      {/* Logout Button & Footer */}
-      <div className="p-4 border-t border-gray-100 dark:border-gray-800/80 space-y-3">
+      {/* Bottom Section: Logout Button & Footer */}
+      <div className="px-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5 mt-auto">
         <button
           onClick={handleLogout}
-          className="w-full py-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white rounded-xl text-xs font-semibold transition-all duration-200 border border-red-200 dark:border-red-500/20 flex items-center justify-center gap-2 shadow-xs"
+          title={!isHovered ? "Logout" : ""}
+          className="w-full py-2.5 bg-rose-50/80 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl text-xs font-semibold transition-all duration-200 border border-rose-200/60 dark:border-rose-500/20 flex items-center justify-center gap-2 group"
         >
-          <LogOut className="w-4 h-4" />
-          <span>Logout</span>
+          <LogOut className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110 text-rose-500" />
+          <span className={`transition-opacity duration-300 whitespace-nowrap ${!isHovered ? "sm:opacity-0 sm:w-0 sm:overflow-hidden" : "opacity-100"}`}>
+            Logout
+          </span>
         </button>
 
-        <div className="text-[10px] text-gray-400 dark:text-gray-500 text-center font-medium">
+        <div className={`text-[9px] text-slate-400 dark:text-slate-500 text-center font-medium transition-opacity duration-300 ${!isHovered ? "sm:opacity-0 sm:h-0 sm:overflow-hidden" : "opacity-100"}`}>
           Battuluoya System v1.0
         </div>
       </div>
@@ -157,36 +173,39 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Top Navigation Bar */}
-      <div className="sm:hidden flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+      <div className="sm:hidden flex items-center justify-between p-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-md shadow-blue-500/20">
             S
           </div>
-          <span className="font-bold text-sm text-gray-900 dark:text-white">Sampath Auto Parts</span>
+          <span className="font-bold text-xs text-slate-900 dark:text-white">Sampath Auto Parts</span>
         </div>
         <button
           onClick={() => setIsOpen(true)}
-          className="p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
+          className="p-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
           aria-label="Open Menu"
         >
-          <Menu className="w-6 h-6" />
+          <Menu className="w-5 h-5" />
         </button>
       </div>
 
       {/* Mobile Fullscreen Sliding Menu */}
-      <div className={`fixed inset-0 z-50 bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-300 ease-in-out sm:hidden ${
+      <div className={`fixed inset-0 z-50 bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-300 ease-in-out sm:hidden ${
         isOpen ? "translate-x-0" : "translate-x-full"
       }`}>
         <SidebarContent />
       </div>
 
-      {/* Desktop Sidebar */}
-      <aside className="w-64 bg-white/90 dark:bg-gray-900/95 backdrop-blur-md text-gray-800 dark:text-gray-100 flex-col hidden sm:flex shadow-lg min-h-screen border-r border-gray-200/80 dark:border-gray-800 transition-colors duration-200">
+      {/* Desktop Sidebar with Hover Expand & Scroll Support */}
+      <aside 
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-slate-800 dark:text-slate-100 hidden sm:flex flex-col shadow-xl h-screen sticky top-0 border-r border-slate-200/70 dark:border-slate-800/80 transition-all duration-300 ease-in-out z-40 ${
+          isHovered ? "w-64" : "w-20"
+        }`}
+      >
         <SidebarContent />
       </aside>
     </>
   );
 }
-
-
-
