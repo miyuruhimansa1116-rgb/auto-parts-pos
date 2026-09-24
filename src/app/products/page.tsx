@@ -10,6 +10,9 @@ import {
   deleteDoc,
   doc,
   updateDoc,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import { Product } from "@/types/product";
 import {
@@ -275,7 +278,7 @@ export default function ProductsPage() {
     setIsModalOpen(true);
   };
 
-  // Submit Product Form
+  // Submit Product Form (साथ සමඟ purchases collection එක update කිරීම)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!partNumber || !name || !sellingPrice) {
@@ -309,8 +312,29 @@ export default function ProductsPage() {
       };
 
       if (editingId) {
+        // 1. Update Product document
         await updateDoc(doc(db, "products", editingId), productData);
-        alert("Product updated successfully!");
+
+        // 2. Update matching documents in 'purchases' collection where partNumber matches
+        const purchasesRef = collection(db, "purchases");
+        const q = query(purchasesRef, where("partNumber", "==", partNumber));
+        const querySnapshot = await getDocs(q);
+
+        const updatePromises = querySnapshot.docs.map((purchaseDoc) =>
+          updateDoc(doc(db, "purchases", purchaseDoc.id), {
+            name: name,
+            supplier: supplier || "General Supplier",
+            costPrice: Number(costPrice) || 0,
+            sellingPrice: Number(sellingPrice) || 0,
+            category: category || "Uncategorized",
+            brand: brand || "Generic",
+            updatedAt: new Date(),
+          })
+        );
+
+        await Promise.all(updatePromises);
+
+        alert("Product and related purchases updated successfully!");
       } else {
         await addDoc(collection(db, "products"), {
           ...productData,
@@ -382,10 +406,10 @@ export default function ProductsPage() {
     return [...products]
       .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""))
       .filter((p: any) => {
-        const query = stockSearchQuery.toLowerCase();
+        const queryText = stockSearchQuery.toLowerCase();
         const matchesQuery =
-          (p.name && p.name.toLowerCase().includes(query)) ||
-          (p.partNumber && p.partNumber.toLowerCase().includes(query));
+          (p.name && p.name.toLowerCase().includes(queryText)) ||
+          (p.partNumber && p.partNumber.toLowerCase().includes(queryText));
         
         const matchesCategory =
           stockFilterCategory === "all" || p.category === stockFilterCategory;
