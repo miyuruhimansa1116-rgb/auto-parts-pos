@@ -64,6 +64,9 @@ export default function SalesReportsPage() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Category View Toggle State ("revenue" හෝ "profit")
+  const [categoryViewMode, setCategoryViewMode] = useState<"revenue" | "profit">("revenue");
+
   // Get User Role, Theme preference and Business Settings on load
   useEffect(() => {
     const role = localStorage.getItem("userRole") || "counter";
@@ -89,12 +92,11 @@ export default function SalesReportsPage() {
         const querySnapshot = await getDocs(collection(db, "sales"));
         let allSales: SaleTransaction[] = [];
         const catSet = new Set<string>();
-        const seenUniqueKeys = new Set<string>(); // එකම ඉන්වොයිස් අංකය සහ එකම වේලාව ඇති වාර්තා පෙරීමට
+        const seenUniqueKeys = new Set<string>();
 
         const processAndPushSale = (data: any, docId: string) => {
           const invoiceNo = data.invoiceNo || docId.slice(0, 6).toUpperCase();
           
-          // වේලාව (Timestamp) නිවැරදිව ලබා ගැනීම
           let rawCreatedAt = data.createdAt;
           let timeKey = "";
           if (rawCreatedAt?.toDate) {
@@ -105,10 +107,8 @@ export default function SalesReportsPage() {
             timeKey = new Date().toISOString();
           }
 
-          // Invoice Number එක සහ CreatedTime එක එකතු කර Unique Key එකක් සෑදීම
           const uniqueKey = `${invoiceNo}_${timeKey}`;
           
-          // දැනටමත් මෙම uniqueKey එක ලැයිස්තුවට එකතු වී ඇත්නම්, මෙය මඟ හරින්න (duplicate එකක් ලෙස ඉවත් වේ)
           if (seenUniqueKeys.has(uniqueKey)) {
             return;
           }
@@ -139,12 +139,10 @@ export default function SalesReportsPage() {
           });
         };
 
-        // 1. ෆයර්බේස් එකෙන් ඔන්ලයින් සේල්ස් ලබා ගැනීම
         querySnapshot.docs.forEach((docSnap) => {
           processAndPushSale(docSnap.data(), docSnap.id);
         });
 
-        // 2. LocalStorage එකේ ඇති ඔෆ්ලයින් සේල්ස් ලබා ගැනීම
         const offlineSales = JSON.parse(localStorage.getItem("pos_offline_sales") || "[]");
         const remainingOfflineSales: any[] = [];
 
@@ -156,7 +154,6 @@ export default function SalesReportsPage() {
           let timeKey = rawCreatedAt?.toDate ? rawCreatedAt.toDate().toISOString() : new Date(rawCreatedAt).toISOString();
           const uniqueKey = `${invoiceNo}_${timeKey}`;
 
-          // මෙය දැනටමත් seenUniqueKeys වල ඇත්නම් (Online සමමුහුර්ත වී ඇත්නම් හෝ ඩුප්ලිකේට් නම්)
           if (seenUniqueKeys.has(uniqueKey)) {
             return; 
           }
@@ -165,10 +162,8 @@ export default function SalesReportsPage() {
           processAndPushSale(data, docId);
         });
 
-        // දැනටමත් ඔන්ලයින් සමමුහුර්ත වූ හෝ ඩුප්ලිකේට් වූ ඔෆ්ලයින් බිල්පත් LocalStorage එකෙන් ඉවත් කිරීම
         localStorage.setItem("pos_offline_sales", JSON.stringify(remainingOfflineSales));
 
-        // 3. එකතු කළ ලැයිස්තුව සෙට් කිරීම
         setSales(allSales);
         setCategories(Array.from(catSet));
       } catch (error) {
@@ -291,18 +286,32 @@ export default function SalesReportsPage() {
     return { totalRevenue, totalQty, totalOrders, avgOrderValue, totalProfit };
   }, [filteredSales]);
 
-  // Category Breakdown Summary
+  // Category Breakdown Summary (Revenue & Profit calculations)
   const categoryBreakdown = useMemo(() => {
-    const map: Record<string, number> = {};
+    const revenueMap: Record<string, number> = {};
+    const profitMap: Record<string, number> = {};
+
     filteredSales.forEach((sale) => {
       sale.items.forEach((it: any) => {
         const cat = it.category || "General";
-        const amt = Number(it.total || (Number(it.sellingPrice || 0) * Number(it.cartQty || it.qty || 1)));
-        map[cat] = (map[cat] || 0) + amt;
+        const q = Number(it.cartQty || it.qty || 1);
+        const sPrice = Number(it.sellingPrice || it.price || 0);
+        const cPrice = Number(it.buyingPrice || it.costPrice || 0);
+        
+        const amt = Number(it.total || (sPrice * q));
+        const profit = (sPrice - cPrice) * q;
+
+        revenueMap[cat] = (revenueMap[cat] || 0) + amt;
+        profitMap[cat] = (profitMap[cat] || 0) + profit;
       });
     });
-    return Object.entries(map).map(([name, amount]) => ({ name, amount }));
-  }, [filteredSales]);
+
+    if (categoryViewMode === "revenue") {
+      return Object.entries(revenueMap).map(([name, amount]) => ({ name, amount }));
+    } else {
+      return Object.entries(profitMap).map(([name, amount]) => ({ name, amount }));
+    }
+  }, [filteredSales, categoryViewMode]);
 
   // Top 5 Items Summary
   const topItems = useMemo(() => {
@@ -353,7 +362,6 @@ export default function SalesReportsPage() {
     <div className={`${darkMode ? "dark" : ""}`}>
       <div className="p-6 md:p-10 max-w-[1400px] mx-auto font-sans space-y-8 bg-gray-50/50 dark:bg-gray-950 text-gray-800 dark:text-gray-100 min-h-screen transition-colors duration-200">
         
-        {/* Global Print Styles for POS Receipt format */}
         <style jsx global>{`
           @media print {
             body * {
@@ -566,18 +574,45 @@ export default function SalesReportsPage() {
 
         {/* Analytics Breakdown Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm col-span-2">
-            <h3 className="font-bold text-base text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 pb-3 flex items-center justify-between">
-              <span className="flex items-center gap-2"><Layers className="w-5 h-5 text-blue-500" /> Revenue by Category</span>
-              <span className="text-sm font-normal text-gray-400 dark:text-gray-400">Share & Total</span>
-            </h3>
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm col-span-2 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-3 gap-3">
+              <h3 className="font-bold text-base text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-blue-500" /> 
+                {categoryViewMode === "revenue" ? "Revenue by Category" : "Profit by Category"}
+              </h3>
+              
+              {/* Revenue & Profit Switcher Toggle */}
+              <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setCategoryViewMode("revenue")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    categoryViewMode === "revenue"
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  Revenue
+                </button>
+                <button
+                  onClick={() => setCategoryViewMode("profit")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    categoryViewMode === "profit"
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  Profit
+                </button>
+              </div>
+            </div>
 
             <div className="mt-4 space-y-4">
               {categoryBreakdown.length === 0 ? (
                 <p className="text-center py-8 text-sm text-gray-400">No data</p>
               ) : (
                 categoryBreakdown.map((cat) => {
-                  const percentage = metrics.totalRevenue > 0 ? (cat.amount / metrics.totalRevenue) * 100 : 0;
+                  const totalBase = categoryViewMode === "revenue" ? metrics.totalRevenue : metrics.totalProfit;
+                  const percentage = totalBase > 0 ? (cat.amount / totalBase) * 100 : 0;
                   return (
                     <div key={cat.name} className="space-y-1.5">
                       <div className="flex justify-between text-sm font-semibold text-gray-800 dark:text-gray-200">
@@ -586,8 +621,12 @@ export default function SalesReportsPage() {
                       </div>
                       <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden border border-gray-200 dark:border-gray-700">
                         <div
-                          className="bg-blue-600 dark:bg-blue-400 h-full rounded-full transition-all duration-500"
-                          style={{ width: `${percentage}%` }}
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            categoryViewMode === "revenue" 
+                              ? "bg-blue-600 dark:bg-blue-400" 
+                              : "bg-amber-500 dark:bg-amber-400"
+                          }`}
+                          style={{ width: `${Math.max(0, Math.min(100, percentage))}%` }}
                         ></div>
                       </div>
                     </div>
@@ -716,7 +755,7 @@ export default function SalesReportsPage() {
         {/* Invoice Details & Reprint Modal */}
         {selectedInvoice && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh] border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-0 overflow-hidden flex flex-col max-h-[90vh] border border-gray-200 dark:border-gray-700">
               <div className="bg-gray-900 dark:bg-gray-950 text-white p-4 flex justify-between items-center no-print border-b border-gray-800">
                 <div>
                   <h3 className="font-bold text-base flex items-center gap-2">
@@ -743,7 +782,7 @@ export default function SalesReportsPage() {
                   Close
                 </button>
                 <button
-                  onClick={() => handlePrintInvoice(selectedInvoice)}
+                  onClick={() => handlePrintInvoice(selectedInvoice)`}
                   className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
                 >
                   <Printer className="w-4 h-4" /> Reprint Bill
