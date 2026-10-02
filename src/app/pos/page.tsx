@@ -81,6 +81,14 @@ export default function POSPage() {
     return "";
   });
 
+  // WhatsApp අංකය සඳහා State එක සහ LocalStorage එකතු කිරීම
+  const [customerPhone, setCustomerPhone] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("pos_persistent_customerPhone") || "";
+    }
+    return "";
+  });
+
   const [currentInvoiceNo, setCurrentInvoiceNo] = useState<number>(0);
 
   // Admin & Invoice Counter States
@@ -112,7 +120,7 @@ export default function POSPage() {
   const [showDraftsModal, setShowDraftsModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"products" | "billing">("products");
 
-  // බිලේ දත්ත වෙනස් වන විට ස්වයංක්‍රීයව LocalStorage හි සුරැකීම (រීෆ්‍රෙශ් කළත් මකී නොයෑමට)
+  // බිලේ දත්ත වෙනස් වන විට ස්වයංක්‍රීයව LocalStorage හි සුරැකීම (රීෆ්‍රෙශ් කළත් මකී නොයෑමට)
   useEffect(() => {
     localStorage.setItem("pos_persistent_cart", JSON.stringify(cart));
   }, [cart]);
@@ -130,6 +138,10 @@ export default function POSPage() {
   }, [customerName]);
 
   useEffect(() => {
+    localStorage.setItem("pos_persistent_customerPhone", customerPhone);
+  }, [customerPhone]);
+
+  useEffect(() => {
     localStorage.setItem("pos_persistent_enableCustomDate", enableCustomDate.toString());
   }, [enableCustomDate]);
 
@@ -143,11 +155,13 @@ export default function POSPage() {
     setDiscount(0);
     setCashPaid(0);
     setCustomerName("");
+    setCustomerPhone("");
     setEnableCustomDate(false);
     localStorage.removeItem("pos_persistent_cart");
     localStorage.removeItem("pos_persistent_discount");
     localStorage.removeItem("pos_persistent_cashPaid");
     localStorage.removeItem("pos_persistent_customerName");
+    localStorage.removeItem("pos_persistent_customerPhone");
     localStorage.removeItem("pos_persistent_enableCustomDate");
     localStorage.removeItem("pos_persistent_customBillDate");
   };
@@ -389,6 +403,31 @@ export default function POSPage() {
       console.error("Error updating invoice counter:", error);
       alert("An error occurred while updating the number.");
     }
+  };
+
+  // WhatsApp මඟින් බිල්පත යැවීමේ Function එක
+  const handleSendWhatsApp = () => {
+    if (!customerPhone.trim()) {
+      alert("කරුණාකර පාරිභෝගිකයාගේ WhatsApp අංකය ඇතුළත් කරන්න (+947XXXXXXXX)");
+      return;
+    }
+
+    const formattedPhone = customerPhone.replace(/[^0-9]/g, "");
+    const invoiceNo = `SAP-${currentInvoiceNo}`;
+    const message = `*INVOICE: ${invoiceNo}*\n` +
+      `පාරිභෝගිකයා: ${customerName.trim() || "CASH CUSTOMER"}\n` +
+      `දිනය: ${enableCustomDate ? customBillDate : new Date().toLocaleDateString()}\n\n` +
+      `*භාණ්ඩ විස්තර:*\n` +
+      cart.map(i => `- ${i.name} (${i.cartQty} x LKR ${i.sellingPrice})`).join("\n") + `\n\n` +
+      `*මුළු එකතුව (Net Total): LKR ${netTotal.toLocaleString()}*\n` +
+      `ගෙවූ මුදල: LKR ${cashPaid.toLocaleString()}\n` +
+      `ඉතිරිය (Balance): LKR ${balance.toLocaleString()}\n\n` +
+      `ස්තුතියි! අපගේ ආයතනය වෙත පැමිණීම ගැන.`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, "_blank");
   };
 
   const handleCheckoutAndPrint = async () => {
@@ -723,6 +762,18 @@ export default function POSPage() {
                 />
               </div>
 
+              {/* Customer WhatsApp Number Input */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500 dark:text-gray-400 font-semibold">WhatsApp No:</span>
+                <input
+                  type="text"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="+94771234567"
+                  className="w-40 p-2 border border-gray-200 dark:border-gray-600 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
               {/* Custom Date Section */}
               <div className="space-y-2 pt-1 border-t border-gray-200 dark:border-gray-700">
                 <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300">
@@ -799,13 +850,22 @@ export default function POSPage() {
                 </div>
               </div>
 
-              <button
-                onClick={handleCheckoutAndPrint}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-sm text-sm sm:text-base flex items-center justify-center gap-2 mt-2"
-              >
-                <Printer className="w-5 h-5" />
-                <span>Pay & Print Receipt</span>
-              </button>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <button
+                  onClick={handleCheckoutAndPrint}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-sm text-xs sm:text-sm flex items-center justify-center gap-1.5"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Pay & Print</span>
+                </button>
+
+                <button
+                  onClick={handleSendWhatsApp}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl transition shadow-sm text-xs sm:text-sm flex items-center justify-center gap-1.5"
+                >
+                  <span>💬 Send WhatsApp</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
