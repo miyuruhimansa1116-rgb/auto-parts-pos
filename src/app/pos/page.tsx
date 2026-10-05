@@ -1,6 +1,7 @@
+// src/app/pos/page.tsx (অথবা আপনার POS পেজ ফাইල් එක)
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, runTransaction, getDoc, setDoc, getDocs } from "firebase/firestore";
 import { Product } from "@/types/product";
@@ -8,7 +9,6 @@ import ReceiptTemplate from "@/components/ReceiptTemplate";
 import { 
   ShoppingCart, 
   Search, 
-  Package, 
   Plus, 
   Minus, 
   Printer, 
@@ -48,6 +48,15 @@ export default function POSPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
+
+  // ෂොප් සෙටින්ග්ස් (ReceiptTemplate එකට සමානව WhatsApp එකටත් ලබා ගැනීමට)
+  const [shopSettings, setShopSettings] = useState({
+    shopName: "Sampath Auto Parts",
+    address: "322, Church Rd, Battuluoya",
+    phone: "07X-XXXXXXX",
+    footerMessage: "THANK YOU COME AGAIN!",
+    currency: "LKR",
+  });
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (typeof window !== "undefined") {
@@ -396,6 +405,7 @@ export default function POSPage() {
     }
   };
 
+  // WhatsApp බිල් පත ReceiptTemplate එකේ ආකෘතියටම ස්වයංක්‍රීයව වෙනස් වන සේ සැකසූ ෆන්ක්ෂන් එක
   const handleSendWhatsApp = () => {
     if (cart.length === 0) {
       alert("Cart is empty!");
@@ -412,30 +422,42 @@ export default function POSPage() {
     }
 
     const formattedDate = enableCustomDate ? customBillDate : new Date().toLocaleDateString();
+    const currencySymbol = shopSettings.currency === "USD" ? "$" : "Rs.";
     
     let itemsText = "";
     cart.forEach((item, index) => {
-      const itemTotal = item.sellingPrice * item.cartQty;
-      itemsText += `${index + 1}. *${item.name}*\n   Code: ${item.partNumber || "-"}\n   Qty: ${item.cartQty} x LKR ${item.sellingPrice.toLocaleString()} = *LKR ${itemTotal.toLocaleString()}*\n\n`;
+      const qty = Number(item.cartQty || item.qty || 1);
+      const price = Number(item.sellingPrice || item.price || 0);
+      const total = qty * price;
+      itemsText += `${index + 1}. *${item.name || item.itemName}*\n`;
+      if (item.partNumber) {
+        itemsText += `   Code: ${item.partNumber}\n`;
+      }
+      itemsText += `   ${qty} x ${price.toLocaleString()} = *${total.toLocaleString()}*\n\n`;
     });
 
     const message = encodeURIComponent(
-      `🚗 *SAMPATH AUTO PARTS* 🚗\n` +
+      `*${shopSettings.shopName}*\n` +
+      `${shopSettings.address}\n` +
+      `Tel: ${shopSettings.phone}\n` +
       `--------------------------------\n` +
-      `📄 *INVOICE:* #SAP-${currentInvoiceNo}\n` +
-      `📅 *DATE:* ${formattedDate}\n` +
-      `👤 *CUSTOMER:* ${customerName.trim() ? customerName.trim() : "CASH CUSTOMER"}\n` +
-      `--------------------------------\n\n` +
-      `📦 *PURCHASED ITEMS:*\n\n` +
+      `Inv: *#SAP-${currentInvoiceNo}*\n` +
+      `Date: ${formattedDate}\n` +
+      `Cust: *${customerName.trim() ? customerName.trim() : "Cash Customer"}*\n` +
+      `--------------------------------\n` +
+      `*ITEMS:*[cite: 5]\n\n` +
       itemsText +
       `--------------------------------\n` +
-      `🔹 *Sub Total:* LKR ${subTotal.toLocaleString()}\n` +
-      `🔹 *Discount:* LKR ${discount.toLocaleString()}\n` +
-      `⭐ *NET TOTAL:* *LKR ${netTotal.toLocaleString()}*\n` +
-      `💵 *Cash Paid:* LKR ${cashPaid.toLocaleString()}\n` +
-      `🪙 *Balance:* LKR ${balance.toLocaleString()}\n` +
+      `Subtotal: ${currencySymbol} ${subTotal.toLocaleString()}\n` +
+      (Number(discount) > 0 ? `Discount: -${currencySymbol} ${discount.toLocaleString()}\n` : ``) +
+      `*NET TOTAL: ${currencySymbol} ${netTotal.toLocaleString()}*\n` +
       `--------------------------------\n` +
-      `🙏 *Thank you for your business!*`
+      `Payment Method: Cash\n` +
+      (cashPaid > 0 ? `Cash Tendered: ${currencySymbol} ${cashPaid.toLocaleString()}\n` : ``) +
+      `Balance Change: ${currencySymbol} ${balance.toLocaleString()}\n` +
+      `--------------------------------\n` +
+      `*${shopSettings.footerMessage}*\n` +
+      `Software by MH System`
     );
 
     window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
@@ -572,7 +594,10 @@ export default function POSPage() {
     <div className="max-w-[1300px] mx-auto p-2 sm:p-6 font-sans dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-100 pb-20 sm:pb-6">
       
       <div id="receipt-print" className="hidden print:block">
-        <ReceiptTemplate invoice={currentInvoiceData} />
+        <ReceiptTemplate 
+          invoice={currentInvoiceData} 
+          onSettingsLoaded={(settings) => setShopSettings(settings)} 
+        />
       </div>
 
       <div className="print:hidden space-y-4">
@@ -750,6 +775,7 @@ export default function POSPage() {
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white max-h-[250px] sm:max-h-[300px] overflow-y-auto shadow-xs">
               <ReceiptTemplate 
                 invoice={currentInvoiceData} 
+                onSettingsLoaded={(settings) => setShopSettings(settings)}
               />
             </div>
 
