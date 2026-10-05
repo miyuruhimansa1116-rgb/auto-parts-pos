@@ -442,7 +442,7 @@ export default function POSPage() {
       `Date: ${formattedDate}\n` +
       `Cust: *${customerName.trim() ? customerName.trim() : "Cash Customer"}*\n` +
       `--------------------------------\n` +
-      `*ITEMS:*[cite: 5]\n\n` +
+      `*ITEMS:*\n\n` +
       itemsText +
       `--------------------------------\n` +
       `Subtotal: ${currencySymbol} ${subTotal.toLocaleString()}\n` +
