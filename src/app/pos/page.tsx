@@ -1,4 +1,4 @@
-// src/app/pos/page.tsx (অথবা আপনার POS পেজ ফাইල් එක)
+// src/app/pos/page.tsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -49,7 +49,6 @@ export default function POSPage() {
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
 
-  // ෂොප් සෙටින්ග්ස් (ReceiptTemplate එකට සමානව WhatsApp එකටත් ලබා ගැනීමට)
   const [shopSettings, setShopSettings] = useState({
     shopName: "Sampath Auto Parts",
     address: "322, Church Rd, Battuluoya",
@@ -104,6 +103,9 @@ export default function POSPage() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  // බිල් ප්‍රින්ට් වුණාට පසු WhatsApp යැවීම තහවුරු කරන Modal එක සඳහා State එකක්
+  const [showWhatsAppConfirmModal, setShowWhatsAppConfirmModal] = useState(false);
 
   const [enableCustomDate, setEnableCustomDate] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -405,7 +407,6 @@ export default function POSPage() {
     }
   };
 
-  // WhatsApp බිල් පත ReceiptTemplate එකේ ආකෘතියටම ස්වයංක්‍රීයව වෙනස් වන සේ සැකසූ ෆන්ක්ෂන් එක
   const handleSendWhatsApp = () => {
     if (cart.length === 0) {
       alert("Cart is empty!");
@@ -438,7 +439,7 @@ export default function POSPage() {
       `${shopSettings.address}\n` +
       `Tel: ${shopSettings.phone}\n` +
       `--------------------------------\n` +
-      `Inv: *#SAP-${currentInvoiceNo}*\n` +
+      `Inv: *#SAP-${currentInvoiceNo - 1}*\n` +
       `Date: ${formattedDate}\n` +
       `Cust: *${customerName.trim() ? customerName.trim() : "Cash Customer"}*\n` +
       `--------------------------------\n` +
@@ -528,7 +529,12 @@ export default function POSPage() {
       saveToOfflineQueue(saleData);
     }
 
-    clearPersistentCart();
+    // බිල් එක ප්‍රින්ට් වී අවසන් වූ පසු WhatsApp අංකයක් ඇතුළත් කර ඇත්නම් තහවුරු කිරීමේ මෝඩල් එක පෙන්වීම
+    if (whatsappNo.trim()) {
+      setShowWhatsAppConfirmModal(true);
+    } else {
+      clearPersistentCart();
+    }
   };
 
   const saveToOfflineQueue = (sale: any) => {
@@ -788,24 +794,16 @@ export default function POSPage() {
                 />
               </div>
 
+              {/* WhatsApp අංකය ඇතුළත් කරන කොටස (පැත්තෙන් තිබූ Send බටන් එක ඉවත් කර ඇත)[cite: 6] */}
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500 dark:text-gray-400 font-semibold">WhatsApp No:</span>
-                <div className="flex gap-1.5 w-40">
-                  <input
-                    type="text"
-                    value={whatsappNo}
-                    onChange={(e) => setWhatsappNo(e.target.value)}
-                    placeholder="0771234567"
-                    className="w-full p-2 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                  <button
-                    onClick={handleSendWhatsApp}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center shadow-xs"
-                    title="Send Bill to WhatsApp"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                  </button>
-                </div>
+                <input
+                  type="text"
+                  value={whatsappNo}
+                  onChange={(e) => setWhatsappNo(e.target.value)}
+                  placeholder="0771234567"
+                  className="w-40 p-2 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 outline-none focus:ring-2 focus:ring-emerald-500"
+                />
               </div>
 
               <div className="space-y-2 pt-1 border-t border-gray-200 dark:border-gray-700">
@@ -895,6 +893,74 @@ export default function POSPage() {
           </div>
         </div>
       </div>
+
+      {/* බිල් පත ප්‍රින්ට් වූ පසු මතුවන WhatsApp Confirmation & Preview Modal එක[cite: 6] */}
+      {showWhatsAppConfirmModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 space-y-5">
+            <div className="flex items-center gap-3.5 border-b border-gray-100 dark:border-gray-700 pb-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs">
+                <MessageCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-gray-900 dark:text-white">
+                  Send Bill via WhatsApp?
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  මෙම බිල්පත WhatsApp හරහා පාරිභෝගිකයාට යවන්නද?
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-200 dark:border-gray-700/80 max-h-[220px] overflow-y-auto shadow-inner">
+              <pre className="text-[11px] font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+{`*${shopSettings.shopName}*
+${shopSettings.address}
+Tel: ${shopSettings.phone}
+--------------------------------
+Inv: *#SAP-${currentInvoiceNo - 1}*
+Date: ${enableCustomDate ? customBillDate : new Date().toLocaleDateString()}
+Cust: *${customerName.trim() ? customerName.trim() : "Cash Customer"}*
+--------------------------------
+*ITEMS:*
+
+${cart.map((item, index) => `${index + 1}. *${item.name}*\n${item.cartQty} x ${(item.sellingPrice \vert{}\vert{} 0).toLocaleString()} = *${(item.cartQty * (item.sellingPrice || 0)).toLocaleString()}*`).join('\n\n')}
+--------------------------------
+Subtotal: ${shopSettings.currency === "USD" ? "$" : "Rs."} ${subTotal.toLocaleString()}
+${Number(discount) > 0 ? `Discount: -${shopSettings.currency === "USD" ? "$" : "Rs."} ${discount.toLocaleString()}\n` : ``}*NET TOTAL: ${shopSettings.currency === "USD" ? "$" : "Rs."} ${netTotal.toLocaleString()}*
+--------------------------------
+Payment Method: Cash
+${cashPaid > 0 ? `Cash Tendered: ${shopSettings.currency === "USD" ? "$" : "Rs."} ${cashPaid.toLocaleString()}\n` : ``}Balance Change: ${shopSettings.currency === "USD" ? "$" : "Rs."} ${balance.toLocaleString()}
+--------------------------------
+*${shopSettings.footerMessage}*
+Software by MH System`}
+              </pre>
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                onClick={() => {
+                  setShowWhatsAppConfirmModal(false);
+                  clearPersistentCart();
+                }}
+                className="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-2xl text-xs font-bold transition"
+              >
+                Skip / මඟහරින්න
+              </button>
+              <button
+                onClick={() => {
+                  handleSendWhatsApp();
+                  setShowWhatsAppConfirmModal(false);
+                  clearPersistentCart();
+                }}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
+              >
+                <MessageCircle className="w-4 h-4" /> Send WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showDraftsModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
