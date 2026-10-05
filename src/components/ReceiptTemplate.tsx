@@ -109,7 +109,6 @@ export default function ReceiptTemplate({ invoice, onSettingsLoaded }: ReceiptPr
                 </div>
                 {item.partNumber && (
                   <div style={{ fontSize: '9px', color: '#4b5563', paddingLeft: '20px' }}>
-                    Code: {item.partNumber}
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#374151', paddingLeft: '20px', marginTop: '2px' }}>
