@@ -24,8 +24,8 @@ import {
   ShieldCheck,
   Settings,
   MessageSquare,
-  Copy,
-  Check
+  Send,
+  Loader2
 } from "lucide-react";
 
 interface CartItem extends Product {
@@ -90,9 +90,9 @@ export default function POSPage() {
     return "";
   });
 
-  const [smsNo, setSmsNo] = useState<string>(() => {
+  const [whatsappNo, setWhatsappNo] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("pos_persistent_smsNo") || "";
+      return localStorage.getItem("pos_persistent_whatsappNo") || "";
     }
     return "";
   });
@@ -105,9 +105,8 @@ export default function POSPage() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [showSmsConfirmModal, setShowSmsConfirmModal] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [isSendingSms, setIsSendingSms] = useState(false);
+  const [showWhatsAppConfirmModal, setShowWhatsAppConfirmModal] = useState(false);
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
   const [enableCustomDate, setEnableCustomDate] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -144,8 +143,8 @@ export default function POSPage() {
   }, [customerName]);
 
   useEffect(() => {
-    localStorage.setItem("pos_persistent_smsNo", smsNo);
-  }, [smsNo]);
+    localStorage.setItem("pos_persistent_whatsappNo", whatsappNo);
+  }, [whatsappNo]);
 
   useEffect(() => {
     localStorage.setItem("pos_persistent_enableCustomDate", enableCustomDate.toString());
@@ -160,13 +159,13 @@ export default function POSPage() {
     setDiscount(0);
     setCashPaid(0);
     setCustomerName("");
-    setSmsNo("");
+    setWhatsappNo("");
     setEnableCustomDate(false);
     localStorage.removeItem("pos_persistent_cart");
     localStorage.removeItem("pos_persistent_discount");
     localStorage.removeItem("pos_persistent_cashPaid");
     localStorage.removeItem("pos_persistent_customerName");
-    localStorage.removeItem("pos_persistent_smsNo");
+    localStorage.removeItem("pos_persistent_whatsappNo");
     localStorage.removeItem("pos_persistent_enableCustomDate");
     localStorage.removeItem("pos_persistent_customBillDate");
   };
@@ -409,7 +408,7 @@ export default function POSPage() {
     }
   };
 
-  const generateSmsText = () => {
+  const generateWhatsAppText = () => {
     const formattedDate = enableCustomDate ? customBillDate : new Date().toLocaleDateString();
     const currencySymbol = shopSettings.currency === "USD" ? "$" : "Rs.";
     
@@ -423,7 +422,7 @@ export default function POSPage() {
     });
 
     return (
-      `${shopSettings.shopName}\n` +
+      `*${shopSettings.shopName}*\n` +
       `${shopSettings.address}\n` +
       `Tel: ${shopSettings.phone}\n` +
       `--------------------------------\n` +
@@ -431,12 +430,12 @@ export default function POSPage() {
       `Date: ${formattedDate}\n` +
       `Cust: ${customerName.trim() ? customerName.trim() : "Cash Customer"}\n` +
       `--------------------------------\n` +
-      `ITEMS:\n\n` +
+      `*ITEMS:*\n\n` +
       itemsText +
       `--------------------------------\n` +
       `Subtotal: ${currencySymbol} ${subTotal.toLocaleString()}\n` +
       (Number(discount) > 0 ? `Discount: -${currencySymbol} ${discount.toLocaleString()}\n` : ``) +
-      `NET TOTAL: ${currencySymbol} ${netTotal.toLocaleString()}\n` +
+      `*NET TOTAL: ${currencySymbol} ${netTotal.toLocaleString()}*\n` +
       `--------------------------------\n` +
       `Payment Method: Cash\n` +
       (cashPaid > 0 ? `Cash Tendered: ${currencySymbol} ${cashPaid.toLocaleString()}\n` : ``) +
@@ -447,22 +446,23 @@ export default function POSPage() {
     );
   };
 
-  const handleSendSMS = async () => {
-    if (cart.length === 0 && !customerName) {
-      alert("No bill data to send!");
-      return;
-    }
-    if (!smsNo.trim()) {
-      alert("Please enter customer mobile number!");
+  // Railway සර්වර් එකට API Call එක යැවීම
+  const handleSendWhatsAppViaAPI = async () => {
+    if (!whatsappNo.trim()) {
+      alert("Please enter customer WhatsApp mobile number!");
       return;
     }
 
-    let phone = smsNo.trim().replace(/[^0-9]/g, "");
-    const messageText = generateSmsText();
+    let phone = whatsappNo.trim().replace(/[^0-9]/g, "");
+    if (phone.startsWith("0")) {
+      phone = "94" + phone.slice(1);
+    }
 
-    setIsSendingSms(true);
+    const messageText = generateWhatsAppText();
+    setIsSendingWhatsApp(true);
+
     try {
-      const res = await fetch("/api/send-sms", {
+      const response = await fetch("https://server-production-152a.up.railway.app/send-message", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -473,27 +473,21 @@ export default function POSPage() {
         }),
       });
 
-      const data = await res.json();
+      const data = await response.json();
 
-      if (data.success) {
-        alert("SMS successfully sent via Text.lk!");
+      if (response.ok) {
+        alert("WhatsApp message sent successfully via Railway Server!");
+        setShowWhatsAppConfirmModal(false);
+        clearPersistentCart();
       } else {
-        alert("SMS sending failed: " + (data.error || "Unknown error"));
+        alert("Failed to send WhatsApp: " + (data.error || "Unknown error"));
       }
     } catch (error) {
-      console.error("SMS API Error:", error);
-      alert("Network error while sending SMS.");
+      console.error("Railway API Error:", error);
+      alert("Network error while connecting to Railway WhatsApp server.");
     } finally {
-      setIsSendingSms(false);
+      setIsSendingWhatsApp(false);
     }
-  };
-
-  const handleCopyBillText = () => {
-    const text = generateSmsText();
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
   };
 
   const handleCheckoutAndPrint = async () => {
@@ -564,8 +558,8 @@ export default function POSPage() {
       saveToOfflineQueue(saleData);
     }
 
-    if (smsNo.trim()) {
-      setShowSmsConfirmModal(true);
+    if (whatsappNo.trim()) {
+      setShowWhatsAppConfirmModal(true);
     } else {
       clearPersistentCart();
     }
@@ -829,13 +823,13 @@ export default function POSPage() {
               </div>
 
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500 dark:text-gray-400 font-semibold">SMS Mobile No:</span>
+                <span className="text-gray-500 dark:text-gray-400 font-semibold">WhatsApp No:</span>
                 <input
                   type="text"
-                  value={smsNo}
-                  onChange={(e) => setSmsNo(e.target.value)}
+                  value={whatsappNo}
+                  onChange={(e) => setWhatsappNo(e.target.value)}
                   placeholder="0771234567"
-                  className="w-40 p-2 border border-blue-300 dark:border-blue-700 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-40 p-2 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -927,60 +921,56 @@ export default function POSPage() {
         </div>
       </div>
 
-      {showSmsConfirmModal && (
+      {showWhatsAppConfirmModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 space-y-5">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
               <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs">
-                  <MessageSquare className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs">
+                  <Send className="w-6 h-6" />
                 </div>
                 <div>
                   <h3 className="font-extrabold text-base text-gray-900 dark:text-white">
-                    Send SMS / Bill Options
+                    Send WhatsApp via Server
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    පාරිභෝගිකයාට API හරහා SMS යවන්න හෝ බිල්පත කොපි කරගන්න.
+                    Railway සර්වර් එක හරහා පාරිභෝගිකයාට බිල්පත යවන්න.
                   </p>
                 </div>
               </div>
-
-              <button
-                onClick={handleCopyBillText}
-                className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-xl text-xs font-bold transition shadow-2xs"
-                title="Copy Bill Text"
-              >
-                {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                <span>{copied ? "Copied!" : "Copy Bill"}</span>
-              </button>
             </div>
 
-            <div className="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-200 dark:border-gray-700/80 max-h-[220px] overflow-y-auto shadow-inner">
+            <div className="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-200 dark:border-gray-700/80 max-h-[180px] overflow-y-auto shadow-inner">
               <pre className="text-[11px] font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                {generateSmsText()}
+                {generateWhatsAppText()}
               </pre>
             </div>
 
             <div className="flex items-center gap-3 pt-1">
               <button
                 onClick={() => {
-                  setShowSmsConfirmModal(false);
+                  setShowWhatsAppConfirmModal(false);
                   clearPersistentCart();
                 }}
+                disabled={isSendingWhatsApp}
                 className="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-2xl text-xs font-bold transition"
               >
                 Skip / මඟහරින්න
               </button>
               <button
-                disabled={isSendingSms}
-                onClick={async () => {
-                  await handleSendSMS();
-                  setShowSmsConfirmModal(false);
-                  clearPersistentCart();
-                }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                onClick={handleSendWhatsAppViaAPI}
+                disabled={isSendingWhatsApp}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
               >
-                <MessageSquare className="w-4 h-4" /> {isSendingSms ? "Sending..." : "Send SMS"}
+                {isSendingWhatsApp ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" /> Send via Server
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -1094,7 +1084,7 @@ export default function POSPage() {
                   value={newStartingInvoice}
                   onChange={(e) => setNewStartingInvoice(e.target.value)}
                   placeholder={`Current: ${currentInvoiceNo}`}
-                  className="w-full p-3 border border-blue-300 dark:border-blue-600 rounded-xl text-sm font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-blue-300 dark:border-blue-600 rounded-xl text-sm font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 outline-1 outline-blue-500"
                   autoFocus
                 />
                 <div className="flex gap-2 pt-1">
