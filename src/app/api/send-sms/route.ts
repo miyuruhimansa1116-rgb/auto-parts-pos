@@ -1,4 +1,3 @@
-// src/app/api/send-sms/route.ts
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -9,9 +8,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Phone and message are required" }, { status: 400 });
     }
 
-    const userId = "33211"; // ඔයාගේ Notify.lk User ID එක (ඩෑෂ්බෝඩ් එකේ Profile හෝ API සෙක්ෂන් එකේ බලාගන්න පුළුවන්)
+    const userId = "33211";
     const apiKey = "y54X1VTwPeEHpLVPN6BL";
-    const senderId = "NotifyDEMO"; // අනුමත වූ පසු ඔයාගේ නම මෙතැනට දමන්න
+    const senderId = "NotifyDEMO";
 
     // Notify.lk API Endpoint එක
     const notifyUrl = `https://app.notify.lk/api/v1/send?user_id=${userId}&api_key=${apiKey}&sender_id=${senderId}&to=${phone}&message=${encodeURIComponent(message)}`;
@@ -21,6 +20,7 @@ export async function POST(request: Request) {
     });
 
     const data = await response.json();
+    console.log("Notify.lk Response:", data);
 
     if (data.status === "success" || data.code === 200) {
       return NextResponse.json({ success: true, data });
