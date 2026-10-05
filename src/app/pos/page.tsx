@@ -920,7 +920,7 @@ Cust: *${customerName.trim() ? customerName.trim() : "Cash Customer"}*
 --------------------------------
 *ITEMS:*
 
-${cart.map((item, index) => `${index + 1}. *${item.name}*\n${item.cartQty} x ${(item.sellingPrice \vert{}\vert{} 0).toLocaleString()} = *${(item.cartQty * (item.sellingPrice || 0)).toLocaleString()}*`).join('\n\n')}
+${cart.map((item, index) => `${index + 1}. *${item.name}*\n${item.cartQty} x ${(item.sellingPrice || 0).toLocaleString()} = *${(item.cartQty * (item.sellingPrice || 0)).toLocaleString()}*`).join('\n\n')}
 --------------------------------
 Subtotal: ${shopSettings.currency === "USD" ? "$" : "Rs."} ${subTotal.toLocaleString()}
 ${Number(discount) > 0 ? `Discount: -${shopSettings.currency === "USD" ? "$" : "Rs."} ${discount.toLocaleString()}\n` : ``}*NET TOTAL: ${shopSettings.currency === "USD" ? "$" : "Rs."} ${netTotal.toLocaleString()}*
