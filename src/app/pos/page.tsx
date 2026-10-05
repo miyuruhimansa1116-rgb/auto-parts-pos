@@ -5,7 +5,6 @@ import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, runTransaction, getDoc, setDoc, getDocs } from "firebase/firestore";
 import { Product } from "@/types/product";
 import ReceiptTemplate from "@/components/ReceiptTemplate";
-import html2canvas from "html2canvas";
 import { 
   ShoppingCart, 
   Search, 
@@ -81,14 +80,6 @@ export default function POSPage() {
     return "";
   });
 
-  // WhatsApp අංකය සඳහා State එක සහ LocalStorage එකතු කිරීම
-  const [customerPhone, setCustomerPhone] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("pos_persistent_customerPhone") || "";
-    }
-    return "";
-  });
-
   const [currentInvoiceNo, setCurrentInvoiceNo] = useState<number>(0);
 
   // Admin & Invoice Counter States
@@ -138,10 +129,6 @@ export default function POSPage() {
   }, [customerName]);
 
   useEffect(() => {
-    localStorage.setItem("pos_persistent_customerPhone", customerPhone);
-  }, [customerPhone]);
-
-  useEffect(() => {
     localStorage.setItem("pos_persistent_enableCustomDate", enableCustomDate.toString());
   }, [enableCustomDate]);
 
@@ -155,13 +142,11 @@ export default function POSPage() {
     setDiscount(0);
     setCashPaid(0);
     setCustomerName("");
-    setCustomerPhone("");
     setEnableCustomDate(false);
     localStorage.removeItem("pos_persistent_cart");
     localStorage.removeItem("pos_persistent_discount");
     localStorage.removeItem("pos_persistent_cashPaid");
     localStorage.removeItem("pos_persistent_customerName");
-    localStorage.removeItem("pos_persistent_customerPhone");
     localStorage.removeItem("pos_persistent_enableCustomDate");
     localStorage.removeItem("pos_persistent_customBillDate");
   };
@@ -401,56 +386,6 @@ export default function POSPage() {
     } catch (error) {
       console.error("Error updating invoice counter:", error);
       alert("An error occurred while updating the number.");
-    }
-  };
-
-  // බිල්පත ලෝකල්ලි Image එකක් ලෙස සකසා WhatsApp වෙත යැවීම
-  const handleSendWhatsApp = async () => {
-    if (!customerPhone.trim()) {
-      alert("කරුණාකර පාරිභෝගිකයාගේ WhatsApp අංකය ඇතුළත් කරන්න (+947XXXXXXXX)");
-      return;
-    }
-
-    if (cart.length === 0) {
-      alert("කාට් එක හිස්ය! කරුණාකර භාණ්ඩ එකතු කරන්න.");
-      return;
-    }
-
-    const receiptElement = document.getElementById("receipt-print");
-    if (!receiptElement) {
-      alert("රසීට් එක සොයාගත නොහැක!");
-      return;
-    }
-
-    try {
-      // html2canvas හරහා බිල් එක Image එකක් බවට හැරවීම
-      const canvas = await html2canvas(receiptElement, { scale: 2 });
-      const imageBase64 = canvas.toDataURL("image/png");
-
-      const invoiceNo = `SAP-${currentInvoiceNo}`;
-      const caption = `*INVOICE: ${invoiceNo}*\nපාරිභෝගිකයා: ${customerName.trim() || "CASH CUSTOMER"}\nස්තුතියි! අපගේ ආයතනය වෙත පැමිණීම ගැන.`;
-
-      const response = await fetch("http://localhost:5000/send-invoice-media", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phone: customerPhone,
-          image: imageBase64,
-          caption: caption,
-        }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        alert("බිල්පත ෆොටෝ එකක් ලෙස WhatsApp හරහා සාර්ථකව යවන ලදී!");
-      } else {
-        alert("යැවීමේ දෝෂයක්: " + data.error);
-      }
-    } catch (error: any) {
-      console.error("Error generating/sending bill image:", error.message);
-      alert("බිල්පත ප්‍රොසෙස් කිරීමේදී හෝ සර්වර් එක සමඟ සම්බන්ධ වීමේදී දෝෂයක් ඇති විය.");
     }
   };
 
@@ -785,18 +720,6 @@ export default function POSPage() {
                 />
               </div>
 
-              {/* Customer WhatsApp Number Input */}
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500 dark:text-gray-400 font-semibold">WhatsApp No:</span>
-                <input
-                  type="text"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="+94771234567"
-                  className="w-40 p-2 border border-gray-200 dark:border-gray-600 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
               {/* Custom Date Section */}
               <div className="space-y-2 pt-1 border-t border-gray-200 dark:border-gray-700">
                 <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300">
@@ -873,20 +796,13 @@ export default function POSPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="mt-2">
                 <button
                   onClick={handleCheckoutAndPrint}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-sm text-xs sm:text-sm flex items-center justify-center gap-1.5"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-sm text-xs sm:text-sm flex items-center justify-center gap-1.5"
                 >
                   <Printer className="w-4 h-4" />
                   <span>Pay & Print</span>
-                </button>
-
-                <button
-                  onClick={handleSendWhatsApp}
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl transition shadow-sm text-xs sm:text-sm flex items-center justify-center gap-1.5"
-                >
-                  <span>💬 Send WhatsApp</span>
                 </button>
               </div>
             </div>
