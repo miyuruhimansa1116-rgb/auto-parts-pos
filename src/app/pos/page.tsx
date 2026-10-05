@@ -1,4 +1,3 @@
-// src/app/pos/page.tsx
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -6,6 +5,7 @@ import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, runTransaction, getDoc, setDoc, getDocs } from "firebase/firestore";
 import { Product } from "@/types/product";
 import ReceiptTemplate from "@/components/ReceiptTemplate";
+import html2canvas from "html2canvas";
 import { 
   ShoppingCart, 
   Search, 
@@ -120,7 +120,7 @@ export default function POSPage() {
   const [showDraftsModal, setShowDraftsModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"products" | "billing">("products");
 
-  // බිලේ දත්ත වෙනස් වන විට ස්වයංක්‍රීයව LocalStorage හි සුරැකීම (රීෆ්‍රෙශ් කළත් මකී නොයෑමට)
+  // බිලේ දත්ත වෙනස් වන විට ස්වයංක්‍රීයව LocalStorage හි සුරැකීම
   useEffect(() => {
     localStorage.setItem("pos_persistent_cart", JSON.stringify(cart));
   }, [cart]);
@@ -323,7 +323,7 @@ export default function POSPage() {
       });
       alert("Bill saved as Draft!");
       setDraftTitle("");
-      clearPersistentCart(); // ඩ්‍රාෆ්ට් එකකට දැමූ පසු වර්තමාන කාට් එක ක්ලියර් කරයි
+      clearPersistentCart();
     } catch (error) {
       alert("Draft saved locally / Offline mode active.");
     }
@@ -348,7 +348,6 @@ export default function POSPage() {
     }
   };
 
-  // Admin Verification & Invoice Number Update Logic
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminPassword.trim()) {
@@ -405,29 +404,54 @@ export default function POSPage() {
     }
   };
 
-  // WhatsApp මඟින් බිල්පත යැවීමේ Function එක
-  const handleSendWhatsApp = () => {
+  // බිල්පත ලෝකල්ලි Image එකක් ලෙස සකසා WhatsApp වෙත යැවීම
+  const handleSendWhatsApp = async () => {
     if (!customerPhone.trim()) {
       alert("කරුණාකර පාරිභෝගිකයාගේ WhatsApp අංකය ඇතුළත් කරන්න (+947XXXXXXXX)");
       return;
     }
 
-    const formattedPhone = customerPhone.replace(/[^0-9]/g, "");
-    const invoiceNo = `SAP-${currentInvoiceNo}`;
-    const message = `*INVOICE: ${invoiceNo}*\n` +
-      `පාරිභෝගිකයා: ${customerName.trim() || "CASH CUSTOMER"}\n` +
-      `දිනය: ${enableCustomDate ? customBillDate : new Date().toLocaleDateString()}\n\n` +
-      `*භාණ්ඩ විස්තර:*\n` +
-      cart.map(i => `- ${i.name} (${i.cartQty} x LKR ${i.sellingPrice})`).join("\n") + `\n\n` +
-      `*මුළු එකතුව (Net Total): LKR ${netTotal.toLocaleString()}*\n` +
-      `ගෙවූ මුදල: LKR ${cashPaid.toLocaleString()}\n` +
-      `ඉතිරිය (Balance): LKR ${balance.toLocaleString()}\n\n` +
-      `ස්තුතියි! අපගේ ආයතනය වෙත පැමිණීම ගැන.`;
+    if (cart.length === 0) {
+      alert("කාට් එක හිස්ය! කරුණාකර භාණ්ඩ එකතු කරන්න.");
+      return;
+    }
 
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
-    
-    window.open(whatsappUrl, "_blank");
+    const receiptElement = document.getElementById("receipt-print");
+    if (!receiptElement) {
+      alert("රසීට් එක සොයාගත නොහැක!");
+      return;
+    }
+
+    try {
+      // html2canvas හරහා බිල් එක Image එකක් බවට හැරවීම
+      const canvas = await html2canvas(receiptElement, { scale: 2 });
+      const imageBase64 = canvas.toDataURL("image/png");
+
+      const invoiceNo = `SAP-${currentInvoiceNo}`;
+      const caption = `*INVOICE: ${invoiceNo}*\nපාරිභෝගිකයා: ${customerName.trim() || "CASH CUSTOMER"}\nස්තුතියි! අපගේ ආයතනය වෙත පැමිණීම ගැන.`;
+
+      const response = await fetch("http://localhost:5000/send-invoice-media", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone: customerPhone,
+          image: imageBase64,
+          caption: caption,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert("බිල්පත ෆොටෝ එකක් ලෙස WhatsApp හරහා සාර්ථකව යවන ලදී!");
+      } else {
+        alert("යැවීමේ දෝෂයක්: " + data.error);
+      }
+    } catch (error: any) {
+      console.error("Error generating/sending bill image:", error.message);
+      alert("බිල්පත ප්‍රොසෙස් කිරීමේදී හෝ සර්වර් එක සමඟ සම්බන්ධ වීමේදී දෝෂයක් ඇති විය.");
+    }
   };
 
   const handleCheckoutAndPrint = async () => {
@@ -498,7 +522,6 @@ export default function POSPage() {
       saveToOfflineQueue(saleData);
     }
 
-    // බිල මුද්‍රණය කර සාර්ථකව අවසන් වූ පසු පමණක් දත්ත ඉවත් කර අලුත් බිලකට සූදානම් කරයි
     clearPersistentCart();
   };
 
