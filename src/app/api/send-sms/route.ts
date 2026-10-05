@@ -1,3 +1,4 @@
+// src/app/api/send-sms/route.ts
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -8,31 +9,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Phone and message are required" }, { status: 400 });
     }
 
-    const apiToken = "8038|0D4BkE4n4sw4c072tctGrqMjHFs3xHBT8wt7ycP16df65bb9";
-    
-    // Text.lk v3 API Endpoint එක
-    const response = await fetch("https://api.text.lk/api/v3/sms/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiToken}`,
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({
-        recipient: phone,
-        sender_id: "TextLKDemo", // ඩෑෂ්බෝඩ් එකේ ඇක්ටිව් තියෙන Sender ID එක (උදා: TextLKDemo)
-        message: message,
-      }),
+    const userId = "1879"; // ඔයාගේ Notify.lk User ID එක (ඩෑෂ්බෝඩ් එකේ Profile හෝ API සෙක්ෂන් එකේ බලාගන්න පුළුවන්)
+    const apiKey = "y54X1VTwPeEHpLVPN6BL";
+    const senderId = "NotifyDEMO"; // අනුමත වූ පසු ඔයාගේ නම මෙතැනට දමන්න
+
+    // Notify.lk API Endpoint එක
+    const notifyUrl = `https://app.notify.lk/api/v1/send?user_id=${userId}&api_key=${apiKey}&sender_id=${senderId}&to=${phone}&message=${encodeURIComponent(message)}`;
+
+    const response = await fetch(notifyUrl, {
+      method: "GET",
     });
 
     const data = await response.json();
 
-    if (!response.ok) {
-      return NextResponse.json({ success: false, error: data.message || "Failed to send SMS" }, { status: response.status });
+    if (data.status === "success" || data.code === 200) {
+      return NextResponse.json({ success: true, data });
+    } else {
+      return NextResponse.json({ success: false, error: data.message || "Failed to send SMS" }, { status: 500 });
     }
-
-    return NextResponse.json({ success: true, data });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message || "Internal Server Error" }, { status: 500 });
+  } catch (error) {
+    console.error("Notify.lk API Error:", error);
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }
