@@ -23,7 +23,9 @@ import {
   AlertCircle,
   ShieldCheck,
   Settings,
-  MessageCircle
+  MessageSquare,
+  Copy,
+  Check
 } from "lucide-react";
 
 interface CartItem extends Product {
@@ -88,9 +90,9 @@ export default function POSPage() {
     return "";
   });
 
-  const [whatsappNo, setWhatsappNo] = useState<string>(() => {
+  const [smsNo, setSmsNo] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("pos_persistent_whatsappNo") || "";
+      return localStorage.getItem("pos_persistent_smsNo") || "";
     }
     return "";
   });
@@ -103,8 +105,8 @@ export default function POSPage() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-
-  const [showWhatsAppConfirmModal, setShowWhatsAppConfirmModal] = useState(false);
+  const [showSmsConfirmModal, setShowSmsConfirmModal] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const [enableCustomDate, setEnableCustomDate] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -141,8 +143,8 @@ export default function POSPage() {
   }, [customerName]);
 
   useEffect(() => {
-    localStorage.setItem("pos_persistent_whatsappNo", whatsappNo);
-  }, [whatsappNo]);
+    localStorage.setItem("pos_persistent_smsNo", smsNo);
+  }, [smsNo]);
 
   useEffect(() => {
     localStorage.setItem("pos_persistent_enableCustomDate", enableCustomDate.toString());
@@ -157,13 +159,13 @@ export default function POSPage() {
     setDiscount(0);
     setCashPaid(0);
     setCustomerName("");
-    setWhatsappNo("");
+    setSmsNo("");
     setEnableCustomDate(false);
     localStorage.removeItem("pos_persistent_cart");
     localStorage.removeItem("pos_persistent_discount");
     localStorage.removeItem("pos_persistent_cashPaid");
     localStorage.removeItem("pos_persistent_customerName");
-    localStorage.removeItem("pos_persistent_whatsappNo");
+    localStorage.removeItem("pos_persistent_smsNo");
     localStorage.removeItem("pos_persistent_enableCustomDate");
     localStorage.removeItem("pos_persistent_customBillDate");
   };
@@ -406,21 +408,7 @@ export default function POSPage() {
     }
   };
 
-  const handleSendWhatsApp = () => {
-    if (cart.length === 0) {
-      alert("Cart is empty!");
-      return;
-    }
-    if (!whatsappNo.trim()) {
-      alert("Please enter customer WhatsApp number!");
-      return;
-    }
-
-    let phone = whatsappNo.trim().replace(/[^0-9]/g, "");
-    if (phone.startsWith("0")) {
-      phone = "94" + phone.slice(1);
-    }
-
+  const generateSmsText = () => {
     const formattedDate = enableCustomDate ? customBillDate : new Date().toLocaleDateString();
     const currencySymbol = shopSettings.currency === "USD" ? "$" : "Rs.";
     
@@ -429,35 +417,58 @@ export default function POSPage() {
       const qty = Number(item.cartQty || item.qty || 1);
       const price = Number(item.sellingPrice || item.price || 0);
       const total = qty * price;
-      itemsText += `${index + 1}. *${item.name || item.itemName}*\n`;
-      itemsText += `   ${qty} x ${price.toLocaleString()} = *${total.toLocaleString()}*\n\n`;
+      itemsText += `${index + 1}. ${item.name || item.itemName}\n`;
+      itemsText += `   ${qty} x ${price.toLocaleString()} = ${total.toLocaleString()}\n\n`;
     });
 
-    const message = encodeURIComponent(
-      `*${shopSettings.shopName}*\n` +
+    return (
+      `${shopSettings.shopName}\n` +
       `${shopSettings.address}\n` +
       `Tel: ${shopSettings.phone}\n` +
       `--------------------------------\n` +
-      `Inv: *#SAP-${currentInvoiceNo - 1}*\n` +
+      `Inv: #SAP-${currentInvoiceNo - 1}\n` +
       `Date: ${formattedDate}\n` +
-      `Cust: *${customerName.trim() ? customerName.trim() : "Cash Customer"}*\n` +
+      `Cust: ${customerName.trim() ? customerName.trim() : "Cash Customer"}\n` +
       `--------------------------------\n` +
-      `*ITEMS:*\n\n` +
+      `ITEMS:\n\n` +
       itemsText +
       `--------------------------------\n` +
       `Subtotal: ${currencySymbol} ${subTotal.toLocaleString()}\n` +
       (Number(discount) > 0 ? `Discount: -${currencySymbol} ${discount.toLocaleString()}\n` : ``) +
-      `*NET TOTAL: ${currencySymbol} ${netTotal.toLocaleString()}*\n` +
+      `NET TOTAL: ${currencySymbol} ${netTotal.toLocaleString()}\n` +
       `--------------------------------\n` +
       `Payment Method: Cash\n` +
       (cashPaid > 0 ? `Cash Tendered: ${currencySymbol} ${cashPaid.toLocaleString()}\n` : ``) +
       `Balance Change: ${currencySymbol} ${balance.toLocaleString()}\n` +
       `--------------------------------\n` +
-      `*${shopSettings.footerMessage}*\n` +
+      `${shopSettings.footerMessage}\n` +
       `Software by MH System`
     );
+  };
 
-    window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+  const handleSendSMS = () => {
+    if (cart.length === 0) {
+      alert("Cart is empty!");
+      return;
+    }
+    if (!smsNo.trim()) {
+      alert("Please enter customer mobile number!");
+      return;
+    }
+
+    let phone = smsNo.trim().replace(/[^0-9]/g, "");
+    const message = encodeURIComponent(generateSmsText());
+
+    // Using standard SMS URL scheme (sms:number?body=text)
+    window.open(`sms:${phone}?body=${message}`, "_blank");
+  };
+
+  const handleCopyBillText = () => {
+    const text = generateSmsText();
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   const handleCheckoutAndPrint = async () => {
@@ -528,8 +539,8 @@ export default function POSPage() {
       saveToOfflineQueue(saleData);
     }
 
-    if (whatsappNo.trim()) {
-      setShowWhatsAppConfirmModal(true);
+    if (smsNo.trim()) {
+      setShowSmsConfirmModal(true);
     } else {
       clearPersistentCart();
     }
@@ -793,13 +804,13 @@ export default function POSPage() {
               </div>
 
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500 dark:text-gray-400 font-semibold">WhatsApp No:</span>
+                <span className="text-gray-500 dark:text-gray-400 font-semibold">SMS Mobile No:</span>
                 <input
                   type="text"
-                  value={whatsappNo}
-                  onChange={(e) => setWhatsappNo(e.target.value)}
+                  value={smsNo}
+                  onChange={(e) => setSmsNo(e.target.value)}
                   placeholder="0771234567"
-                  className="w-40 p-2 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-40 p-2 border border-blue-300 dark:border-blue-700 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -891,52 +902,44 @@ export default function POSPage() {
         </div>
       </div>
 
-      {showWhatsAppConfirmModal && (
+      {showSmsConfirmModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 space-y-5">
-            <div className="flex items-center gap-3.5 border-b border-gray-100 dark:border-gray-700 pb-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs">
-                <MessageCircle className="w-6 h-6" />
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-gray-900 dark:text-white">
+                    Send SMS / Bill Options
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    පාරිභෝගිකයාට SMS යවන්න හෝ බිල්පත කොපි කරගන්න.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-extrabold text-base text-gray-900 dark:text-white">
-                  Send Bill via WhatsApp?
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  මෙම බිල්පත WhatsApp හරහා පාරිභෝගිකයාට යවන්නද?
-                </p>
-              </div>
+
+              <button
+                onClick={handleCopyBillText}
+                className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-xl text-xs font-bold transition shadow-2xs"
+                title="Copy Bill Text"
+              >
+                {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                <span>{copied ? "Copied!" : "Copy Bill"}</span>
+              </button>
             </div>
 
             <div className="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-200 dark:border-gray-700/80 max-h-[220px] overflow-y-auto shadow-inner">
               <pre className="text-[11px] font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-{`*${shopSettings.shopName}*
-${shopSettings.address}
-Tel: ${shopSettings.phone}
---------------------------------
-Inv: *#SAP-${currentInvoiceNo - 1}*
-Date: ${enableCustomDate ? customBillDate : new Date().toLocaleDateString()}
-Cust: *${customerName.trim() ? customerName.trim() : "Cash Customer"}*
---------------------------------
-*ITEMS:*
-
-${cart.map((item, index) => `${index + 1}. *${item.name}*\n${item.cartQty} x ${(item.sellingPrice || 0).toLocaleString()} = *${(item.cartQty * (item.sellingPrice || 0)).toLocaleString()}*`).join('\n\n')}
---------------------------------
-Subtotal: ${shopSettings.currency === "USD" ? "$" : "Rs."} ${subTotal.toLocaleString()}
-${Number(discount) > 0 ? `Discount: -${shopSettings.currency === "USD" ? "$" : "Rs."} ${discount.toLocaleString()}\n` : ``}*NET TOTAL: ${shopSettings.currency === "USD" ? "$" : "Rs."} ${netTotal.toLocaleString()}*
---------------------------------
-Payment Method: Cash
-${cashPaid > 0 ? `Cash Tendered: ${shopSettings.currency === "USD" ? "$" : "Rs."} ${cashPaid.toLocaleString()}\n` : ``}Balance Change: ${shopSettings.currency === "USD" ? "$" : "Rs."} ${balance.toLocaleString()}
---------------------------------
-*${shopSettings.footerMessage}*
-Software by MH System`}
+                {generateSmsText()}
               </pre>
             </div>
 
             <div className="flex items-center gap-3 pt-1">
               <button
                 onClick={() => {
-                  setShowWhatsAppConfirmModal(false);
+                  setShowSmsConfirmModal(false);
                   clearPersistentCart();
                 }}
                 className="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-2xl text-xs font-bold transition"
@@ -945,13 +948,13 @@ Software by MH System`}
               </button>
               <button
                 onClick={() => {
-                  handleSendWhatsApp();
-                  setShowWhatsAppConfirmModal(false);
+                  handleSendSMS();
+                  setShowSmsConfirmModal(false);
                   clearPersistentCart();
                 }}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
               >
-                <MessageCircle className="w-4 h-4" /> Send WhatsApp
+                <MessageSquare className="w-4 h-4" /> Send SMS
               </button>
             </div>
           </div>
