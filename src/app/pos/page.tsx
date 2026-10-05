@@ -22,7 +22,8 @@ import {
   Calendar,
   AlertCircle,
   ShieldCheck,
-  Settings
+  Settings,
+  MessageCircle
 } from "lucide-react";
 
 interface CartItem extends Product {
@@ -48,7 +49,6 @@ export default function POSPage() {
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
 
-  // LocalStorage මඟින් දත්ත ආරක්ෂා කරගැනීම සඳහා Initial States සකස් කිරීම
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("pos_persistent_cart");
@@ -80,18 +80,22 @@ export default function POSPage() {
     return "";
   });
 
+  const [whatsappNo, setWhatsappNo] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("pos_persistent_whatsappNo") || "";
+    }
+    return "";
+  });
+
   const [currentInvoiceNo, setCurrentInvoiceNo] = useState<number>(0);
 
-  // Admin & Invoice Counter States
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [newStartingInvoice, setNewStartingInvoice] = useState("");
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
-  // Cashier Error Message State
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  // Custom Date States
   const [enableCustomDate, setEnableCustomDate] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("pos_persistent_enableCustomDate") === "true";
@@ -106,12 +110,10 @@ export default function POSPage() {
     return new Date().toISOString().split("T")[0];
   });
 
-  // Draft States
   const [draftTitle, setDraftTitle] = useState("");
   const [showDraftsModal, setShowDraftsModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"products" | "billing">("products");
 
-  // බිලේ දත්ත වෙනස් වන විට ස්වයංක්‍රීයව LocalStorage හි සුරැකීම
   useEffect(() => {
     localStorage.setItem("pos_persistent_cart", JSON.stringify(cart));
   }, [cart]);
@@ -129,6 +131,10 @@ export default function POSPage() {
   }, [customerName]);
 
   useEffect(() => {
+    localStorage.setItem("pos_persistent_whatsappNo", whatsappNo);
+  }, [whatsappNo]);
+
+  useEffect(() => {
     localStorage.setItem("pos_persistent_enableCustomDate", enableCustomDate.toString());
   }, [enableCustomDate]);
 
@@ -136,17 +142,18 @@ export default function POSPage() {
     localStorage.setItem("pos_persistent_customBillDate", customBillDate);
   }, [customBillDate]);
 
-  // තාවකාලික බිල් දත්ත පිරිසිදු කිරීමට අවශ්‍ය නම් පාවිච්චි කරන function එකක්
   const clearPersistentCart = () => {
     setCart([]);
     setDiscount(0);
     setCashPaid(0);
     setCustomerName("");
+    setWhatsappNo("");
     setEnableCustomDate(false);
     localStorage.removeItem("pos_persistent_cart");
     localStorage.removeItem("pos_persistent_discount");
     localStorage.removeItem("pos_persistent_cashPaid");
     localStorage.removeItem("pos_persistent_customerName");
+    localStorage.removeItem("pos_persistent_whatsappNo");
     localStorage.removeItem("pos_persistent_enableCustomDate");
     localStorage.removeItem("pos_persistent_customBillDate");
   };
@@ -389,6 +396,51 @@ export default function POSPage() {
     }
   };
 
+  const handleSendWhatsApp = () => {
+    if (cart.length === 0) {
+      alert("Cart is empty!");
+      return;
+    }
+    if (!whatsappNo.trim()) {
+      alert("Please enter customer WhatsApp number!");
+      return;
+    }
+
+    let phone = whatsappNo.trim().replace(/[^0-9]/g, "");
+    if (phone.startsWith("0")) {
+      phone = "94" + phone.slice(1);
+    }
+
+    const formattedDate = enableCustomDate ? customBillDate : new Date().toLocaleDateString();
+    
+    let itemsText = "";
+    cart.forEach((item, index) => {
+      const itemTotal = item.sellingPrice * item.cartQty;
+      itemsText += `${index + 1}. *${item.name}*\n   Code: ${item.partNumber || "-"}\n   Qty: ${item.cartQty} x LKR ${item.sellingPrice.toLocaleString()} = *LKR ${itemTotal.toLocaleString()}*\n\n`;
+    });
+
+    const message = encodeURIComponent(
+      `🚗 *SAMPATH AUTO PARTS* 🚗\n` +
+      `--------------------------------\n` +
+      `📄 *INVOICE:* #SAP-${currentInvoiceNo}\n` +
+      `📅 *DATE:* ${formattedDate}\n` +
+      `👤 *CUSTOMER:* ${customerName.trim() ? customerName.trim() : "CASH CUSTOMER"}\n` +
+      `--------------------------------\n\n` +
+      `📦 *PURCHASED ITEMS:*\n\n` +
+      itemsText +
+      `--------------------------------\n` +
+      `🔹 *Sub Total:* LKR ${subTotal.toLocaleString()}\n` +
+      `🔹 *Discount:* LKR ${discount.toLocaleString()}\n` +
+      `⭐ *NET TOTAL:* *LKR ${netTotal.toLocaleString()}*\n` +
+      `💵 *Cash Paid:* LKR ${cashPaid.toLocaleString()}\n` +
+      `🪙 *Balance:* LKR ${balance.toLocaleString()}\n` +
+      `--------------------------------\n` +
+      `🙏 *Thank you for your business!*`
+    );
+
+    window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+  };
+
   const handleCheckoutAndPrint = async () => {
     setCheckoutError(null);
 
@@ -524,7 +576,6 @@ export default function POSPage() {
       </div>
 
       <div className="print:hidden space-y-4">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2.5 sm:p-3 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl">
@@ -536,7 +587,6 @@ export default function POSPage() {
             </div>
           </div>
           
-          {/* Drafts Button & Admin Invoice Settings Button */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowDraftsModal(true)}
@@ -561,7 +611,6 @@ export default function POSPage() {
           </div>
         </div>
 
-        {/* Mobile View Switcher */}
         <div className="flex lg:hidden grid-cols-2 gap-2 bg-gray-200 dark:bg-gray-800 p-1 rounded-xl">
           <button
             onClick={() => setActiveTab("products")}
@@ -584,10 +633,8 @@ export default function POSPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           
-          {/* Products Section */}
           <div className={`lg:col-span-2 bg-white dark:bg-gray-800 p-3 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs space-y-4 ${activeTab === "billing" ? "hidden lg:block" : "block"}`}>
             
-            {/* Search & Filters */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
               <div className="relative">
                 <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
@@ -645,7 +692,6 @@ export default function POSPage() {
               </div>
             </div>
 
-            {/* Product Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 max-h-[calc(100vh-280px)] sm:max-h-[500px] overflow-y-auto pr-1">
               {filteredProducts.map((product) => {
                 const cartItem = cart.find((item) => item.id === product.id);
@@ -699,10 +745,9 @@ export default function POSPage() {
             </div>
           </div>
 
-          {/* Cart & Billing Section */}
           <div className={`bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex flex-col justify-between space-y-4 ${activeTab === "products" ? "hidden lg:flex" : "flex"}`}>
             
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white max-h-[300px] sm:max-h-[350px] overflow-y-auto shadow-xs">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white max-h-[250px] sm:max-h-[300px] overflow-y-auto shadow-xs">
               <ReceiptTemplate 
                 invoice={currentInvoiceData} 
               />
@@ -720,7 +765,26 @@ export default function POSPage() {
                 />
               </div>
 
-              {/* Custom Date Section */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500 dark:text-gray-400 font-semibold">WhatsApp No:</span>
+                <div className="flex gap-1.5 w-40">
+                  <input
+                    type="text"
+                    value={whatsappNo}
+                    onChange={(e) => setWhatsappNo(e.target.value)}
+                    placeholder="0771234567"
+                    className="w-full p-2 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    onClick={handleSendWhatsApp}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center shadow-xs"
+                    title="Send Bill to WhatsApp"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-2 pt-1 border-t border-gray-200 dark:border-gray-700">
                 <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300">
                   <input
@@ -770,7 +834,6 @@ export default function POSPage() {
                 />
               </div>
 
-              {/* Cashier Error Message Box */}
               {checkoutError && (
                 <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-2 animate-shake">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -810,7 +873,6 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* Drafts Modal */}
       {showDraftsModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl max-w-lg w-full shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
@@ -870,7 +932,6 @@ export default function POSPage() {
         </div>
       )}
 
-      {/* Admin Verification & Invoice Number Setup Modal */}
       {showAdminModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl max-w-sm w-full shadow-xl space-y-4">
