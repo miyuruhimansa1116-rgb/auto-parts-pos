@@ -430,9 +430,6 @@ export default function POSPage() {
       const price = Number(item.sellingPrice || item.price || 0);
       const total = qty * price;
       itemsText += `${index + 1}. *${item.name || item.itemName}*\n`;
-      if (item.partNumber) {
-        itemsText += `   Code: ${item.partNumber}\n`;
-      }
       itemsText += `   ${qty} x ${price.toLocaleString()} = *${total.toLocaleString()}*\n\n`;
     });
 
