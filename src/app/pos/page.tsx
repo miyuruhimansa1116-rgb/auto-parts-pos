@@ -446,7 +446,7 @@ export default function POSPage() {
     );
   };
 
-  // Railway සර්වර් එකට API Call එක යැවීම
+  // Firebase එකෙන් ඩයිනමික් ලෙස සර්වර් URL එක ලබාගෙන WhatsApp API Call එක යැවීම[cite: 6]
   const handleSendWhatsAppViaAPI = async () => {
     if (!whatsappNo.trim()) {
       alert("Please enter customer WhatsApp mobile number!");
@@ -462,7 +462,19 @@ export default function POSPage() {
     setIsSendingWhatsApp(true);
 
     try {
-      const response = await fetch("https://server-production-152a.up.railway.app/send-message", {
+      // 1. Firebase එකෙන් current active server URL එක ලබා ගැනීම[cite: 6]
+      const configDoc = await getDoc(doc(db, "settings", "whatsapp_config"));
+      
+      if (!configDoc.exists()) {
+        alert("WhatsApp සර්වර් ලින්ක් එක ෆයර්බේස් එකේ හමුවුනේ නැත!");
+        setIsSendingWhatsApp(false);
+        return;
+      }
+
+      const serverUrl = configDoc.data().serverUrl; // උදා: https://xxxx.free.pinggy.link හෝ Railway URL එක[cite: 6]
+
+      // 2. අදාළ ලින්ක් එකට WhatsApp API request එක යැවීම[cite: 6]
+      const response = await fetch(`${serverUrl}/send-message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -475,16 +487,16 @@ export default function POSPage() {
 
       const data = await response.json();
 
-      if (response.ok) {
-        alert("WhatsApp message sent successfully via Railway Server!");
+      if (response.ok && data.success !== false) {
+        alert("WhatsApp message sent successfully!");
         setShowWhatsAppConfirmModal(false);
         clearPersistentCart();
       } else {
         alert("Failed to send WhatsApp: " + (data.error || "Unknown error"));
       }
     } catch (error) {
-      console.error("Railway API Error:", error);
-      alert("Network error while connecting to Railway WhatsApp server.");
+      console.error("WhatsApp API Error:", error);
+      alert("සර්වර් එක සමඟ සම්බන්ධ වීමේ දෝෂයක් ඇති විය!");
     } finally {
       setIsSendingWhatsApp(false);
     }
@@ -934,7 +946,7 @@ export default function POSPage() {
                     Send WhatsApp via Server
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Railway සර්වර් එක හරහා පාරිභෝගිකයාට බිල්පත යවන්න.
+                    Firebase එකෙන් active සර්වර් ලින්ක් එක ලබාගෙන පාරිභෝගිකයාට බිල්පත යවන්න.
                   </p>
                 </div>
               </div>
@@ -1005,7 +1017,7 @@ export default function POSPage() {
                     >
                       <div className="space-y-1">
                         <h4 className="font-bold text-sm text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                          🚗 {d.title}
+                          {d.title}
                         </h4>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           Items: <span className="font-semibold">{d.cart.length}</span> | Net Total: <span className="font-bold text-emerald-600 dark:text-emerald-400">LKR {draftTotal.toLocaleString()}</span>
