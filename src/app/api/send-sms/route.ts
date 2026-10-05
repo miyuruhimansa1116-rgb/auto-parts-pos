@@ -8,27 +8,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Phone and message are required" }, { status: 400 });
     }
 
-    const userId = "33211";
-    const apiKey = "y54X1VTwPeEHpLVPN6BL";
-    const senderId = "NotifyDEMO";
+    // අපේ ලැප්ටොප් එකේ රන් වන Local WhatsApp Server එකට රික්වෙස්ට් එක යැවීම
+    const localServerUrl = "http://localhost:3001/send-message";
 
-    // Notify.lk API Endpoint එක
-    const notifyUrl = `https://app.notify.lk/api/v1/send?user_id=${userId}&api_key=${apiKey}&sender_id=${senderId}&to=${phone}&message=${encodeURIComponent(message)}`;
-
-    const response = await fetch(notifyUrl, {
-      method: "GET",
+    const response = await fetch(localServerUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ phone, message }),
     });
 
     const data = await response.json();
-    console.log("Notify.lk Response:", data);
 
-    if (data.status === "success" || data.code === 200) {
+    if (data.success) {
       return NextResponse.json({ success: true, data });
     } else {
-      return NextResponse.json({ success: false, error: data.message || "Failed to send SMS" }, { status: 500 });
+      return NextResponse.json({ success: false, error: data.error || "Failed to send WhatsApp message" }, { status: 500 });
     }
   } catch (error) {
-    console.error("Notify.lk API Error:", error);
-    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
+    console.error("Local WhatsApp Bridge Error:", error);
+    return NextResponse.json({ success: false, error: "Internal Server Error or Local Server is offline" }, { status: 500 });
   }
 }
