@@ -19,9 +19,10 @@ interface ReceiptProps {
     cashier?: string;
     createdAt?: any;
   };
+  onSettingsLoaded?: (settings: any) => void;
 }
 
-export default function ReceiptTemplate({ invoice }: ReceiptProps) {
+export default function ReceiptTemplate({ invoice, onSettingsLoaded }: ReceiptProps) {
   const [shopSettings, setShopSettings] = useState({
     shopName: "Sampath Auto Parts",
     address: "322, Church Rd, Battuluoya",
@@ -34,13 +35,17 @@ export default function ReceiptTemplate({ invoice }: ReceiptProps) {
     const unsubSettings = onSnapshot(doc(db, "settings", "business"), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setShopSettings({
+        const newSettings = {
           shopName: data.businessName || "AUTO ELECTRICAL & AC",
           address: data.businessAddress || "No. 12, Main Street, Battuluoya",
           phone: data.phoneNumber || "07X-XXXXXXX",
           footerMessage: data.footerMessage || "THANK YOU COME AGAIN!",
           currency: data.currency || "LKR",
-        });
+        };
+        setShopSettings(newSettings);
+        if (onSettingsLoaded) onSettingsLoaded(newSettings);
+      } else {
+        if (onSettingsLoaded) onSettingsLoaded(shopSettings);
       }
     });
 
@@ -56,27 +61,27 @@ export default function ReceiptTemplate({ invoice }: ReceiptProps) {
     : new Date();
 
   return (
-    <div className="bg-white text-black font-mono text-[11px] p-3 max-w-[58mm] mx-auto print:p-2 print:w-[58mm] select-none leading-relaxed">
+    <div style={{ backgroundColor: '#ffffff', color: '#000000', fontFamily: 'monospace', fontSize: '11px', padding: '12px', maxWidth: '58mm', margin: '0 auto', userSelect: 'none', lineHeight: '1.4' }}>
       {/* Header */}
-      <div className="text-center border-b border-dashed border-gray-400 pb-3 mb-2 space-y-1">
-        <h2 className="font-extrabold text-xs tracking-wider uppercase">{shopSettings.shopName}</h2>
-        <p className="text-[10px] text-gray-700 px-1">{shopSettings.address}</p>
-        <p className="text-[10px] text-gray-700">Tel: {shopSettings.phone}</p>
+      <div style={{ textAlign: 'center', borderBottom: '1px dashed #9ca3af', paddingBottom: '12px', marginBottom: '8px' }}>
+        <h2 style={{ fontWeight: 800, fontSize: '12px', textTransform: 'uppercase', margin: 0 }}>{shopSettings.shopName}</h2>
+        <p style={{ fontSize: '10px', color: '#374151', margin: '2px 0' }}>{shopSettings.address}</p>
+        <p style={{ fontSize: '10px', color: '#374151', margin: 0 }}>Tel: {shopSettings.phone}</p>
         
-        <div className="pt-2 text-[10px] space-y-1 text-left border-t border-dashed border-gray-300 mt-2.5">
-          <div className="flex justify-between">
-            <span>Inv:<strong className="font-bold">{invoice.invoiceNo}</strong></span>
+        <div style={{ paddingTop: '8px', fontSize: '10px', textAlign: 'left', borderTop: '1px dashed #d1d5db', marginTop: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Inv: <strong style={{ fontWeight: 'bold' }}>{invoice.invoiceNo}</strong></span>
             <span>{d.toLocaleDateString()} {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
 
           {invoice.customerName ? (
-            <div className="flex justify-between">
-              <span>Cust:<span className="font-semibold">{invoice.customerName}</span></span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
+              <span>Cust: <span style={{ fontWeight: 600 }}>{invoice.customerName}</span></span>
               {invoice.cashier && <span>Cashier: {invoice.cashier}</span>}
             </div>
           ) : (
             invoice.cashier && (
-              <div className="flex justify-end">
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
                 <span>Cashier: {invoice.cashier}</span>
               </div>
             )
@@ -85,28 +90,31 @@ export default function ReceiptTemplate({ invoice }: ReceiptProps) {
       </div>
 
       {/* Items Section */}
-      <div className="border-b border-gray-800 pb-2 mb-2">
-        <div className="flex justify-between text-[10px] font-bold text-gray-900 border-b border-gray-800 pb-1">
+      <div style={{ borderBottom: '1px solid #1f2937', paddingBottom: '8px', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold', color: '#111827', borderBottom: '1px solid #1f2937', paddingBottom: '4px' }}>
           <span># Items/Qty</span>
-          <span className="text-right">Amount</span>
+          <span>Amount</span>
         </div>
 
-        <div className="space-y-2.5 mt-2">
+        <div style={{ marginTop: '8px' }}>
           {invoice.items.map((item: any, idx: number) => {
             const qty = Number(item.cartQty || item.qty || 1);
             const price = Number(item.sellingPrice || item.price || 0);
             const total = qty * price;
             return (
-              <div key={idx} className="text-[11px]">
-                {/* අයිතමයේ අංකය සහ නම */}
-                <div className="font-bold text-gray-900 uppercase">
-                  <span className="inline-block w-5 text-gray-600">{idx + 1}.</span>
+              <div key={idx} style={{ fontSize: '11px', marginBottom: '8px' }}>
+                <div style={{ fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>
+                  <span style={{ display: 'inline-block', width: '20px', color: '#4b5563' }}>{idx + 1}.</span>
                   <span>{item.name || item.itemName}</span>
                 </div>
-                {/* ප්‍රමාණය, මිල සහ මුළු මුදල පැහැදිලිව පෙළගැස්වීම */}
-                <div className="flex justify-between items-center text-[10px] text-gray-700 pl-5 mt-0.5">
+                {item.partNumber && (
+                  <div style={{ fontSize: '9px', color: '#4b5563', paddingLeft: '20px' }}>
+                    Code: {item.partNumber}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#374151', paddingLeft: '20px', marginTop: '2px' }}>
                   <span>{qty} x {price.toLocaleString()}</span>
-                  <span className="font-semibold text-gray-900">{total.toLocaleString()}</span>
+                  <span style={{ fontWeight: 600, color: '#111827' }}>{total.toLocaleString()}</span>
                 </div>
               </div>
             );
@@ -115,35 +123,35 @@ export default function ReceiptTemplate({ invoice }: ReceiptProps) {
       </div>
 
       {/* Totals Section */}
-      <div className="pt-1 space-y-1.5 text-[11px]">
-        <div className="flex justify-between text-gray-700">
+      <div style={{ paddingTop: '4px', fontSize: '11px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#374151', marginBottom: '4px' }}>
           <span>Subtotal:</span>
           <span>{currencySymbol} {invoice.subTotal?.toLocaleString()}</span>
         </div>
         {Number(invoice.discount) > 0 && (
-          <div className="flex justify-between text-red-600 font-medium">
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626', fontWeight: 500, marginBottom: '4px' }}>
             <span>Discount:</span>
             <span>-{currencySymbol} {invoice.discount?.toLocaleString()}</span>
           </div>
         )}
-        <div className="flex justify-between font-bold text-xs border-t border-b border-gray-900 py-1.5 my-1.5">
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '12px', borderTop: '1px solid #111827', borderBottom: '1px solid #111827', padding: '6px 0', margin: '6px 0' }}>
           <span>NET TOTAL:</span>
           <span>{currencySymbol} {invoice.netTotal?.toLocaleString()}</span>
         </div>
 
-        <div className="space-y-1 pt-1 text-[10px] text-gray-700">
-          <div className="flex justify-between">
+        <div style={{ paddingTop: '4px', fontSize: '10px', color: '#374151' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
             <span>Payment Method:</span>
-            <span className="uppercase font-semibold">{invoice.paymentMethod || "Cash"}</span>
+            <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>{invoice.paymentMethod || "Cash"}</span>
           </div>
           {invoice.cashPaid !== undefined && invoice.cashPaid > 0 && (
-            <div className="flex justify-between">
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
               <span>Cash Tendered:</span>
               <span>{currencySymbol} {invoice.cashPaid.toLocaleString()}</span>
             </div>
           )}
           {invoice.balance !== undefined && (
-            <div className="flex justify-between font-medium">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 500 }}>
               <span>Balance Change:</span>
               <span>{currencySymbol} {invoice.balance.toLocaleString()}</span>
             </div>
@@ -152,11 +160,11 @@ export default function ReceiptTemplate({ invoice }: ReceiptProps) {
       </div>
 
       {/* Footer Note */}
-      <div className="text-center border-t border-dashed border-gray-400 pt-3 mt-3 space-y-1.5">
-        <p className="text-[10px] font-extrabold tracking-wider text-gray-900">
+      <div style={{ textAlign: 'center', borderTop: '1px dashed #9ca3af', paddingTop: '10px', marginTop: '10px' }}>
+        <p style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.05em', color: '#111827', margin: 0 }}>
           {shopSettings.footerMessage}
         </p>
-        <p className="text-[9px] text-gray-400 pt-1">
+        <p style={{ fontSize: '9px', color: '#9ca3af', paddingTop: '4px', margin: 0 }}>
           Software by MH System
         </p>
       </div>
