@@ -104,7 +104,6 @@ export default function POSPage() {
 
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  // බිල් ප්‍රින්ට් වුණාට පසු WhatsApp යැවීම තහවුරු කරන Modal එක සඳහා State එකක්
   const [showWhatsAppConfirmModal, setShowWhatsAppConfirmModal] = useState(false);
 
   const [enableCustomDate, setEnableCustomDate] = useState<boolean>(() => {
@@ -529,7 +528,6 @@ export default function POSPage() {
       saveToOfflineQueue(saleData);
     }
 
-    // බිල් එක ප්‍රින්ට් වී අවසන් වූ පසු WhatsApp අංකයක් ඇතුළත් කර ඇත්නම් තහවුරු කිරීමේ මෝඩල් එක පෙන්වීම
     if (whatsappNo.trim()) {
       setShowWhatsAppConfirmModal(true);
     } else {
@@ -794,7 +792,6 @@ export default function POSPage() {
                 />
               </div>
 
-              {/* WhatsApp අංකය ඇතුළත් කරන කොටස (පැත්තෙන් තිබූ Send බටන් එක ඉවත් කර ඇත)[cite: 6] */}
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500 dark:text-gray-400 font-semibold">WhatsApp No:</span>
                 <input
@@ -894,7 +891,6 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* බිල් පත ප්‍රින්ට් වූ පසු මතුවන WhatsApp Confirmation & Preview Modal එක[cite: 6] */}
       {showWhatsAppConfirmModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 space-y-5">
