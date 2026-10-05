@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Phone and message are required" }, { status: 400 });
     }
 
-    const userId = "1879"; // ඔයාගේ Notify.lk User ID එක (ඩෑෂ්බෝඩ් එකේ Profile හෝ API සෙක්ෂන් එකේ බලාගන්න පුළුවන්)
+    const userId = "33211"; // ඔයාගේ Notify.lk User ID එක (ඩෑෂ්බෝඩ් එකේ Profile හෝ API සෙක්ෂන් එකේ බලාගන්න පුළුවන්)
     const apiKey = "y54X1VTwPeEHpLVPN6BL";
     const senderId = "NotifyDEMO"; // අනුමත වූ පසු ඔයාගේ නම මෙතැනට දමන්න
 
