@@ -107,6 +107,7 @@ export default function POSPage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [showSmsConfirmModal, setShowSmsConfirmModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isSendingSms, setIsSendingSms] = useState(false);
 
   const [enableCustomDate, setEnableCustomDate] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -446,9 +447,9 @@ export default function POSPage() {
     );
   };
 
-  const handleSendSMS = () => {
-    if (cart.length === 0) {
-      alert("Cart is empty!");
+  const handleSendSMS = async () => {
+    if (cart.length === 0 && !customerName) {
+      alert("No bill data to send!");
       return;
     }
     if (!smsNo.trim()) {
@@ -457,10 +458,34 @@ export default function POSPage() {
     }
 
     let phone = smsNo.trim().replace(/[^0-9]/g, "");
-    const message = encodeURIComponent(generateSmsText());
+    const messageText = generateSmsText();
 
-    // Using standard SMS URL scheme (sms:number?body=text)
-    window.open(`sms:${phone}?body=${message}`, "_blank");
+    setIsSendingSms(true);
+    try {
+      const res = await fetch("/api/send-sms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone: phone,
+          message: messageText,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert("SMS successfully sent via Text.lk!");
+      } else {
+        alert("SMS sending failed: " + (data.error || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("SMS API Error:", error);
+      alert("Network error while sending SMS.");
+    } finally {
+      setIsSendingSms(false);
+    }
   };
 
   const handleCopyBillText = () => {
@@ -915,7 +940,7 @@ export default function POSPage() {
                     Send SMS / Bill Options
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    පාරිභෝගිකයාට SMS යවන්න හෝ බිල්පත කොපි කරගන්න.
+                    පාරිභෝගිකයාට API හරහා SMS යවන්න හෝ බිල්පත කොපි කරගන්න.
                   </p>
                 </div>
               </div>
@@ -947,14 +972,15 @@ export default function POSPage() {
                 Skip / මඟහරින්න
               </button>
               <button
-                onClick={() => {
-                  handleSendSMS();
+                disabled={isSendingSms}
+                onClick={async () => {
+                  await handleSendSMS();
                   setShowSmsConfirmModal(false);
                   clearPersistentCart();
                 }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
               >
-                <MessageSquare className="w-4 h-4" /> Send SMS
+                <MessageSquare className="w-4 h-4" /> {isSendingSms ? "Sending..." : "Send SMS"}
               </button>
             </div>
           </div>
