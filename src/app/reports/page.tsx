@@ -164,6 +164,9 @@ export default function SalesReportsPage() {
 
         localStorage.setItem("pos_offline_sales", JSON.stringify(remainingOfflineSales));
 
+        // Sort sales by invoiceNo in ascending order (e.g., SAP-01, SAP-02, SAP-03)
+        allSales.sort((a, b) => a.invoiceNo.localeCompare(b.invoiceNo, undefined, { numeric: true, sensitivity: 'base' }));
+
         setSales(allSales);
         setCategories(Array.from(catSet));
       } catch (error) {
@@ -206,11 +209,11 @@ export default function SalesReportsPage() {
     }
   };
 
-  // Filter Logic
+  // Filter Logic (Sorted by invoiceNo)
   const filteredSales = useMemo(() => {
     const now = new Date();
 
-    return sales.filter((sale) => {
+    const filtered = sales.filter((sale) => {
       let itemDate: Date;
       if (sale.createdAt?.toDate) {
         itemDate = sale.createdAt.toDate();
@@ -261,6 +264,9 @@ export default function SalesReportsPage() {
 
       return matchesDate && matchesPayment && matchesCategory && matchesSearch;
     });
+
+    // Ensure sorted order by invoiceNo
+    return filtered.sort((a, b) => a.invoiceNo.localeCompare(b.invoiceNo, undefined, { numeric: true, sensitivity: 'base' }));
   }, [sales, dateRange, startDate, endDate, filterPayment, filterCategory, searchQuery]);
 
   // Summary Metrics Calculation
