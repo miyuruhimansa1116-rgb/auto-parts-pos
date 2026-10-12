@@ -62,6 +62,10 @@ export default function ReceiptTemplate({ invoice, onSettingsLoaded }: ReceiptPr
     ? new Date(invoice.createdAt)
     : new Date();
 
+  // බිල්පතේ මුද්‍රණය වන සම්පූර්ණ එකතුව (භාණ්ඩවල මිල + වැඩ කුලිය + අතිරේක සේවා ගාස්තු - වට්ටම්) ගණනය කිරීම
+  const extraSum = (invoice.extraCharges || []).reduce((acc: number, curr: any) => acc + curr.amount, 0);
+  const calculatedDisplayTotal = Math.max(0, (invoice.subTotal || 0) - (invoice.discount || 0)) + Number(invoice.laborCharge || 0) + extraSum;
+
   return (
     <div style={{ backgroundColor: '#ffffff', color: '#000000', fontFamily: 'monospace', fontSize: '11px', padding: '12px', maxWidth: '58mm', margin: '0 auto', userSelect: 'none', lineHeight: '1.4' }}>
       {/* Header */}
@@ -134,18 +138,18 @@ export default function ReceiptTemplate({ invoice, onSettingsLoaded }: ReceiptPr
         {Number(invoice.laborCharge) > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#b45309', fontWeight: 600, marginBottom: '4px' }}>
             <span>වැඩ කුලිය:</span>
-            <span>+{currencySymbol} {Number(invoice.laborCharge).toLocaleString()}</span>
+            <span>{currencySymbol} {Number(invoice.laborCharge).toLocaleString()}</span>
           </div>
         )}
         {invoice.extraCharges && invoice.extraCharges.map((ex, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#4338ca', fontWeight: 600, marginBottom: '4px' }}>
             <span>{ex.name}:</span>
-            <span>+{currencySymbol} {ex.amount.toLocaleString()}</span>
+            <span>{currencySymbol} {ex.amount.toLocaleString()}</span>
           </div>
         ))}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '12px', borderTop: '1px solid #111827', borderBottom: '1px solid #111827', padding: '6px 0', margin: '6px 0' }}>
           <span>NET TOTAL:</span>
-          <span>{currencySymbol} {invoice.netTotal?.toLocaleString()}</span>
+          <span>{currencySymbol} {calculatedDisplayTotal.toLocaleString()}</span>
         </div>
 
         <div style={{ paddingTop: '4px', fontSize: '10px', color: '#374151' }}>
