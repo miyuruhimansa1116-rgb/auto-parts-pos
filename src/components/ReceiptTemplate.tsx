@@ -142,7 +142,7 @@ export default function ReceiptTemplate({ invoice, onSettingsLoaded }: ReceiptPr
         {/* වැඩ කුලිය රිසිට් පතේ පෙන්වීම (സിස්ටම් මුදලට එකතු නොවේ) */}
         {Number(invoice.laborCharge) > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '11px', color: '#b45309', borderBottom: '1px dashed #d97706', paddingBottom: '4px', marginBottom: '6px' }}>
-            <span>Dadha (වැඩ කුලිය):</span>
+            <span>වැඩ කුලිය:</span>
             <span>{currencySymbol} {Number(invoice.laborCharge).toLocaleString()}</span>
           </div>
         )}
