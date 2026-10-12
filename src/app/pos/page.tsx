@@ -499,7 +499,7 @@ export default function POSPage() {
       `Subtotal: ${currencySymbol}${subTotal.toLocaleString()}\n` +
       (Number(discount) > 0 ? `Discount: -${currencySymbol}${discount.toLocaleString()}\n` : ``) +
       `*NET TOTAL: ${currencySymbol}${netTotal.toLocaleString()}*\n` +
-      (Number(laborCharge) > 0 ? `Dadha (වැඩ කුලිය): ${currencySymbol}${Number(laborCharge).toLocaleString()}\n` : ``) +
+      (Number(laborCharge) > 0 ? `වැඩ කුලිය: ${currencySymbol}${Number(laborCharge).toLocaleString()}\n` : ``) +
       `--------------------------------\n` +
       `Payment Method: Cash\n` +
       (cashPaid > 0 ? `Cash Tendered: ${currencySymbol}${cashPaid.toLocaleString()}\n` : ``) +
@@ -941,7 +941,7 @@ export default function POSPage() {
               {/* වැඩ කුලිය ඇතුළත් කිරීම සඳහා වෙනම කොටස */}
               <div className="flex justify-between items-center text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded-xl border border-amber-200 dark:border-amber-900">
                 <span className="text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5 text-xs">
-                  <Wrench className="w-3.5 h-3.5" /> Dadha / වැඩ කුලිය:
+                  <Wrench className="w-3.5 h-3.5" /> වැඩ කුලිය:
                 </span>
                 <input
                   type="number"
