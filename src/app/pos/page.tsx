@@ -24,7 +24,8 @@ import {
   Settings,
   Info,
   Send,
-  Loader2
+  Loader2,
+  Wrench
 } from "lucide-react";
 
 interface CartItem extends Product {
@@ -36,6 +37,7 @@ interface DraftBill {
   title: string;
   cart: CartItem[];
   discount: number;
+  laborCharge?: number;
   createdAt: any;
 }
 
@@ -57,7 +59,6 @@ export default function POSPage() {
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
 
-  // Product details pahanasathi modal state
   const [selectedProductDetails, setSelectedProductDetails] = useState<Product | null>(null);
 
   const [shopSettings, setShopSettings] = useState({
@@ -79,6 +80,15 @@ export default function POSPage() {
   const [discount, setDiscount] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("pos_persistent_discount");
+      return saved ? Number(saved) : 0;
+    }
+    return 0;
+  });
+
+  // වැඩ කුලිය සඳහා state එක (සිස්ටම් සල්ලි වලට සම්බන්ධ නොවේ)[cite: 5]
+  const [laborCharge, setLaborCharge] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("pos_persistent_laborCharge");
       return saved ? Number(saved) : 0;
     }
     return 0;
@@ -115,7 +125,6 @@ export default function POSPage() {
 
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [showWhatsAppConfirmModal, setShowWhatsAppConfirmModal] = useState(false);
-  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
   const [enableCustomDate, setEnableCustomDate] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -142,6 +151,10 @@ export default function POSPage() {
   useEffect(() => {
     localStorage.setItem("pos_persistent_discount", discount.toString());
   }, [discount]);
+
+  useEffect(() => {
+    localStorage.setItem("pos_persistent_laborCharge", laborCharge.toString());
+  }, [laborCharge]);
 
   useEffect(() => {
     localStorage.setItem("pos_persistent_cashPaid", cashPaid.toString());
@@ -174,6 +187,7 @@ export default function POSPage() {
   const clearPersistentCart = () => {
     setCart([]);
     setDiscount(0);
+    setLaborCharge(0);
     setCashPaid(0);
     setCustomerName("");
     setWhatsappNo("");
@@ -181,6 +195,7 @@ export default function POSPage() {
     setEnableCustomDate(false);
     localStorage.removeItem("pos_persistent_cart");
     localStorage.removeItem("pos_persistent_discount");
+    localStorage.removeItem("pos_persistent_laborCharge");
     localStorage.removeItem("pos_persistent_cashPaid");
     localStorage.removeItem("pos_persistent_customerName");
     localStorage.removeItem("pos_persistent_whatsappNo");
@@ -323,7 +338,7 @@ export default function POSPage() {
   };
 
   const subTotal = cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0);
-  const netTotal = Math.max(0, subTotal - discount);
+  const netTotal = Math.max(0, subTotal - discount); 
   const balance = Math.max(0, cashPaid - netTotal);
 
   const handleSaveDraft = async () => {
@@ -344,6 +359,7 @@ export default function POSPage() {
           title: titleToSave,
           cart,
           discount,
+          laborCharge,
         });
         alert("Draft bill successfully updated!");
         setDraftTitle("");
@@ -356,7 +372,7 @@ export default function POSPage() {
       );
 
       if (existingDraftWithSameTitle) {
-        alert(`Error: '${titleToSave}' vehicle number is already saved as a draft! Please load it to update.`);
+        alert(`Error: '${titleToSave}' වාහන අංකයෙන් දැනටමත් ඩ්‍රාෆ්ට් බිල්පතක් පවතී!`);
         return;
       }
 
@@ -364,6 +380,7 @@ export default function POSPage() {
         title: titleToSave,
         cart,
         discount,
+        laborCharge,
         createdAt: enableCustomDate ? new Date(customBillDate) : new Date(),
       });
       alert("Bill saved as Draft!");
@@ -377,6 +394,7 @@ export default function POSPage() {
   const handleLoadDraft = (draft: DraftBill) => {
     setCart(draft.cart || []);
     setDiscount(draft.discount || 0);
+    setLaborCharge(draft.laborCharge || 0);
     setCustomerName(draft.title || "");
     setLoadedDraftId(draft.id || null);
     setShowDraftsModal(false);
@@ -481,6 +499,7 @@ export default function POSPage() {
       `Subtotal: ${currencySymbol}${subTotal.toLocaleString()}\n` +
       (Number(discount) > 0 ? `Discount: -${currencySymbol}${discount.toLocaleString()}\n` : ``) +
       `*NET TOTAL: ${currencySymbol}${netTotal.toLocaleString()}*\n` +
+      (Number(laborCharge) > 0 ? `Dadha (වැඩ කුලිය): ${currencySymbol}${Number(laborCharge).toLocaleString()}\n` : ``) +
       `--------------------------------\n` +
       `Payment Method: Cash\n` +
       (cashPaid > 0 ? `Cash Tendered: ${currencySymbol}${cashPaid.toLocaleString()}\n` : ``) +
@@ -528,7 +547,7 @@ export default function POSPage() {
     }
 
     if (cashPaid < netTotal) {
-      setCheckoutError(`Cash paid amount is less than the net total (Rs. ${netTotal.toLocaleString()})! Please enter a valid amount.`);
+      setCheckoutError(`Cash paid amount is less than the net total (Rs. ${netTotal.toLocaleString()})!`);
       return;
     }
 
@@ -559,6 +578,7 @@ export default function POSPage() {
       items: cart,
       subTotal,
       discount,
+      laborCharge, // සේල්ස් රිපෝර්ට් වල බිල් එක ඕපන් කරද්දී පෙන්වීමට සුරැකේ[cite: 5]
       netTotal,
       cashPaid,
       balance,
@@ -650,6 +670,7 @@ export default function POSPage() {
     items: cart,
     subTotal: subTotal,
     discount: discount,
+    laborCharge: laborCharge, 
     netTotal: netTotal,
     cashPaid: cashPaid,
     balance: balance,
@@ -801,7 +822,6 @@ export default function POSPage() {
                         : "border-gray-100 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/25 dark:hover:bg-blue-950/20"
                     }`}
                   >
-                    {/* Info Icon for viewing product details */}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -915,6 +935,20 @@ export default function POSPage() {
                   onChange={(e) => setDiscount(Number(e.target.value))}
                   placeholder="0"
                   className="w-32 p-2 border border-gray-200 dark:border-gray-600 rounded-xl text-right text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* වැඩ කුලිය ඇතුළත් කිරීම සඳහා වෙනම කොටස */}
+              <div className="flex justify-between items-center text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded-xl border border-amber-200 dark:border-amber-900">
+                <span className="text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5 text-xs">
+                  <Wrench className="w-3.5 h-3.5" /> Dadha / වැඩ කුලිය:
+                </span>
+                <input
+                  type="number"
+                  value={laborCharge || ""}
+                  onChange={(e) => setLaborCharge(Number(e.target.value))}
+                  placeholder="0"
+                  className="w-32 p-1.5 border border-amber-300 dark:border-amber-700 rounded-lg text-right text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -1090,6 +1124,7 @@ export default function POSPage() {
                         </h4>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           Items: <span className="font-semibold">{d.cart.length}</span> | Net Total: <span className="font-bold text-emerald-600 dark:text-emerald-400">LKR {draftTotal.toLocaleString()}</span>
+                          {d.laborCharge ? ` | Dadha: LKR ${d.laborCharge.toLocaleString()}` : ""}
                         </p>
                       </div>
                       
