@@ -45,6 +45,14 @@ export default function POSPage() {
   const [brands, setBrands] = useState<string[]>([]);
   const [drafts, setDrafts] = useState<DraftBill[]>([]);
 
+  // ඩ්‍රාෆ්ට් එකක් ලෝඩ් කර ඇත්නම් එහි ID එක ගබඩා කර තබා ගැනීමට (Update කරගැනීමට)
+  const [loadedDraftId, setLoadedDraftId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("pos_persistent_loadedDraftId") || null;
+    }
+    return null;
+  });
+
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
@@ -153,18 +161,28 @@ export default function POSPage() {
     localStorage.setItem("pos_persistent_customBillDate", customBillDate);
   }, [customBillDate]);
 
+  useEffect(() => {
+    if (loadedDraftId) {
+      localStorage.setItem("pos_persistent_loadedDraftId", loadedDraftId);
+    } else {
+      localStorage.removeItem("pos_persistent_loadedDraftId");
+    }
+  }, [loadedDraftId]);
+
   const clearPersistentCart = () => {
     setCart([]);
     setDiscount(0);
     setCashPaid(0);
     setCustomerName("");
     setWhatsappNo("");
+    setLoadedDraftId(null);
     setEnableCustomDate(false);
     localStorage.removeItem("pos_persistent_cart");
     localStorage.removeItem("pos_persistent_discount");
     localStorage.removeItem("pos_persistent_cashPaid");
     localStorage.removeItem("pos_persistent_customerName");
     localStorage.removeItem("pos_persistent_whatsappNo");
+    localStorage.removeItem("pos_persistent_loadedDraftId");
     localStorage.removeItem("pos_persistent_enableCustomDate");
     localStorage.removeItem("pos_persistent_customBillDate");
   };
@@ -306,18 +324,43 @@ export default function POSPage() {
   const netTotal = Math.max(0, subTotal - discount);
   const balance = Math.max(0, cashPaid - netTotal);
 
+  // ඩ්‍රාෆ්ට් එකක් සේව් කිරීම හෝ Update කිරීම
   const handleSaveDraft = async () => {
     if (cart.length === 0) {
       alert("Cart is empty!");
       return;
     }
-    const titleToSave = draftTitle.trim() || customerName.trim();
+    const titleToSave = (draftTitle.trim() || customerName.trim()).toUpperCase();
     if (!titleToSave) {
       alert("Please enter vehicle number or name!");
       return;
     }
 
     try {
+      // දැනටමත් ලෝඩ් කර ඇති ඩ්‍රාෆ්ට් එකක් නම්, එම ID එකෙන්ම Update කරන්න
+      if (loadedDraftId) {
+        const draftRef = doc(db, "drafts", loadedDraftId);
+        await updateDoc(draftRef, {
+          title: titleToSave,
+          cart,
+          discount,
+        });
+        alert("Draft bill successfully updated!");
+        setDraftTitle("");
+        clearPersistentCart();
+        return;
+      }
+
+      // අලුතින් ඩ්‍රාෆ්ට් එකක් සේව් කිරීමට යාමේදී, එම වාහන අංකයෙන්ම වෙනත් ඩ්‍රාෆ්ට් එකක් තිබේදැයි පරීක්ෂා කිරීම
+      const existingDraftWithSameTitle = drafts.find(
+        (d) => d.title.trim().toUpperCase() === titleToSave
+      );
+
+      if (existingDraftWithSameTitle) {
+        alert(`Error: '${titleToSave' වාහන අංකයෙන් දැනටමත් ඩ්‍රාෆ්ට් බිල්පතක් පවතී! කරුණාකර එය ਲੋඩ් කර අලුත් බඩු ඇඩ් කරන්න.`);
+        return;
+      }
+
       await addDoc(collection(db, "drafts"), {
         title: titleToSave,
         cart,
@@ -336,6 +379,7 @@ export default function POSPage() {
     setCart(draft.cart || []);
     setDiscount(draft.discount || 0);
     setCustomerName(draft.title || "");
+    setLoadedDraftId(draft.id || null); // ඩ්‍රාෆ්ට් එකේ ID එක මතක තබා ගැනීම
     setShowDraftsModal(false);
     setActiveTab("billing"); 
   };
@@ -345,6 +389,9 @@ export default function POSPage() {
     if (confirm("Are you sure you want to delete this draft bill?")) {
       try {
         await deleteDoc(doc(db, "drafts", id));
+        if (loadedDraftId === id) {
+          setLoadedDraftId(null);
+        }
       } catch (err) {
         console.error("Delete draft error:", err);
       }
@@ -445,7 +492,6 @@ export default function POSPage() {
     );
   };
 
-  // ලොගින් වී සිටින WhatsApp (Web / Mobile App) එකෙන් කෙලින්ම යැවීම
   const handleOpenDirectWhatsApp = () => {
     if (!whatsappNo.trim()) {
       alert("Please enter customer WhatsApp mobile number!");
@@ -460,7 +506,6 @@ export default function POSPage() {
     const messageText = encodeURIComponent(generateWhatsAppText());
     const waUrl = `https://wa.me/${phone}?text=${messageText}`;
 
-    // නව ටැබ් එකකින් WhatsApp ඕපන් කිරීම
     window.open(waUrl, "_blank");
 
     setShowWhatsAppConfirmModal(false);
@@ -486,6 +531,15 @@ export default function POSPage() {
     
     localStorage.setItem("pos_invoice_no", nextInvoiceNo.toString());
     setCurrentInvoiceNo(nextInvoiceNo);
+
+    // බිල් පත් කළ පසු අදාළ ඩ්‍රාෆ්ට් එක ලෝඩ් කර තිබුණි නම් එයින් ඩ්‍රාෆ්ට් එක ඉවත් කිරීම (Delete කිරීම)
+    if (loadedDraftId) {
+      try {
+        await deleteDoc(doc(db, "drafts", loadedDraftId));
+      } catch (err) {
+        console.warn("Could not delete processed draft:", err);
+      }
+    }
 
     const formattedInvoiceNo = `SAP-${assignedInvoiceNo}`;
     const finalDateObj = enableCustomDate ? new Date(customBillDate) : new Date();
@@ -879,7 +933,7 @@ export default function POSPage() {
                     onClick={handleSaveDraft}
                     className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap"
                   >
-                    <BookmarkPlus className="w-4 h-4" /> Save Draft
+                    <BookmarkPlus className="w-4 h-4" /> {loadedDraftId ? "Update Draft" : "Save Draft"}
                   </button>
                 </div>
               </div>
