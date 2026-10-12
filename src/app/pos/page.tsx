@@ -100,7 +100,6 @@ export default function POSPage() {
     return 0;
   });
 
-  // පට්ටල් වැඩ වැනි වෙනත් අතිරේක ගාස්තු සඳහා state එක
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("pos_persistent_extraCharges");
@@ -230,7 +229,7 @@ export default function POSPage() {
 
   const handleAddExtraCharge = () => {
     if (!newExtraName.trim() || newExtraAmount === "" || Number(newExtraAmount) <= 0) {
-      alert("කරුණාකර සේවාවේ නම සහ නිවැරදි මුදලක් ඇතුළත් කරන්න!");
+      alert("Please enter service name and valid amount!");
       return;
     }
     const newItem: ExtraCharge = {
@@ -382,13 +381,12 @@ export default function POSPage() {
 
   const subTotal = cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0);
   
-  // සේල්ස් රිපෝර්ට් සඳහා යන Net Total එක (බඩු වල මුදල පමණි)
+  // సిස්ටම් බැලන්ස් / සේල්ස් රිපෝර්ට් සඳහා යන Net Total එක (බඩු වල මුදල පමණි)[cite: 12]
   const systemNetTotal = Math.max(0, subTotal - discount); 
   
-  // සියලුම අතිරේක ගාස්තු වල එකතුව
   const totalExtraCharges = extraCharges.reduce((acc, item) => acc + item.amount, 0);
 
-  // බිල්පතේ මුද්‍රණය වන සහ පාරිභෝගිකයාට පෙන්වන සම්පූර්ණ එකතුව (වැඩ කුලිය + පට්ටල් වැඩ ඇතුළු සියලුම අතිරේක ගාස්තු සමඟ)
+  // බිල්පතේ මුද්‍රණය වන සහ පාරිභෝගිකයාට පෙන්වන සම්පූර්ණ එකතුව (වැඩ කුලිය + අතිරේක සේවා සමඟ)[cite: 12]
   const displayTotalWithAll = systemNetTotal + Number(laborCharge || 0) + totalExtraCharges;
   
   const balance = Math.max(0, cashPaid - displayTotalWithAll);
@@ -425,7 +423,7 @@ export default function POSPage() {
       );
 
       if (existingDraftWithSameTitle) {
-        alert(`Error: '${titleToSave}' වාහන අංකයෙන් දැනටමත් ඩ්‍රාෆ්ට් බිල්පතක් පවතී!`);
+        alert(`Error: Draft bill with vehicle number '${titleToSave}' already exists!`);
         return;
       }
 
@@ -536,15 +534,15 @@ export default function POSPage() {
       const price = Number(item.sellingPrice || item.price || 0);
       const total = qty * price;
       itemsText += `${index + 1}.${item.name || item.itemName}\n`;
-      itemsText += `   ${qty} x ${price.toLocaleString()} =${total.toLocaleString()}\n\n`;
+      itemsText += `   ${qty} x ${price.toLocaleString()} = ${total.toLocaleString()}\n\n`;
     });
 
     let extraText = "";
     if (Number(laborCharge) > 0) {
-      extraText += `වැඩ කුලිය: +${currencySymbol}${Number(laborCharge).toLocaleString()}\n`;
+      extraText += `වැඩ කුලිය: ${currencySymbol}${Number(laborCharge).toLocaleString()}\n`; // වැඩ කුලියට පමනක් '+' නැත[cite: 12]
     }
     extraCharges.forEach((ex) => {
-      extraText += `${ex.name}: +${currencySymbol}${ex.amount.toLocaleString()}\n`;
+      extraText += `${ex.name}: ${currencySymbol}${ex.amount.toLocaleString()}\n`; // අනෙක් ඒවාටද '+' නැත[cite: 12]
     });
 
     return (
@@ -634,7 +632,8 @@ export default function POSPage() {
 
     window.print();
 
-    // සේල්ස් රිපෝර්ට් සඳහා netTotal ලෙස යන්නේ වැඩ කුලිය සහ පට්ටල් වැඩ නැති systemNetTotal එකයි.
+    // සේල්ස් රිපෝර්ට් සඳහා netTotal ලෙස යන්නේ වැඩ කුලිය සහ අතිරේක සේවා නැති systemNetTotal එකයි (බැලන්ස් වලට ඇඩ් නොවීම සඳහා)[cite: 12].
+    // නමුත් සම්පූර්ණ බිල්පත නැවත බැලීමේදී පෙන්වීමට laborCharge සහ extraCharges ද මෙහි ඇතුළත් කර ඇත.
     const saleData = {
       invoiceNo: formattedInvoiceNo,
       createdAt: finalDateObj.toISOString(),
@@ -728,7 +727,6 @@ export default function POSPage() {
     });
   }, [products, search, selectedCategory, selectedBrand, sortBy, cart]);
 
-  // රිසිට් පතට යවන ඩේටා
   const currentInvoiceData = {
     invoiceNo: `SAP-${currentInvoiceNo}`,
     customerName: customerName.trim() ? customerName.trim() : "CASH CUSTOMER",
@@ -1005,7 +1003,7 @@ export default function POSPage() {
                 />
               </div>
 
-              {/* වැඩ කුලිය සඳහා කොටස */}
+              {/* වැඩ කුලිය (Labor Charge) */}
               <div className="flex justify-between items-center text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded-xl border border-amber-200 dark:border-amber-900">
                 <span className="text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5 text-xs">
                   <Wrench className="w-3.5 h-3.5" /> වැඩ කුලිය:
@@ -1019,9 +1017,9 @@ export default function POSPage() {
                 />
               </div>
 
-              {/* පට්ටල් වැඩ හෝ වෙනත් අතිරේක සේවා ගාස්තු එකතු කිරීමේ කොටස */}
+              {/* Extra Services / Lathe Works */}
               <div className="space-y-2 bg-indigo-50/50 dark:bg-indigo-950/20 p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-900">
-                <span className="text-indigo-700 dark:text-indigo-300 font-bold text-xs block">අතිරේක සේවා / පට්ටල් වැඩ:</span>
+                <span className="text-indigo-700 dark:text-indigo-300 font-bold text-xs block">Extra Services / Lathe Works:</span>
                 
                 {extraCharges.map((ex) => (
                   <div key={ex.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900 text-xs">
@@ -1042,14 +1040,14 @@ export default function POSPage() {
                 <div className="flex gap-1.5 pt-1">
                   <input
                     type="text"
-                    placeholder="සේවාවේ නම (උදා: Lathe Work)"
+                    placeholder="Service Name (e.g. Lathe Work)"
                     value={newExtraName}
                     onChange={(e) => setNewExtraName(e.target.value)}
                     className="flex-1 p-1.5 border border-indigo-300 dark:border-indigo-700 rounded-lg text-xs bg-white dark:bg-gray-700 outline-none"
                   />
                   <input
                     type="number"
-                    placeholder="ගණන"
+                    placeholder="Amount"
                     value={newExtraAmount === "" ? "" : newExtraAmount}
                     onChange={(e) => setNewExtraAmount(e.target.value === "" ? "" : Number(e.target.value))}
                     className="w-20 p-1.5 border border-indigo-300 dark:border-indigo-700 rounded-lg text-xs bg-white dark:bg-gray-700 outline-none text-right font-bold"
