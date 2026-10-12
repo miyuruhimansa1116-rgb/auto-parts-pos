@@ -22,7 +22,7 @@ import {
   AlertCircle,
   ShieldCheck,
   Settings,
-  MessageSquare,
+  Info,
   Send,
   Loader2
 } from "lucide-react";
@@ -45,7 +45,6 @@ export default function POSPage() {
   const [brands, setBrands] = useState<string[]>([]);
   const [drafts, setDrafts] = useState<DraftBill[]>([]);
 
-  // ඩ්‍රාෆ්ට් එකක් ලෝඩ් කර ඇත්නම් එහි ID එක ගබඩා කර තබා ගැනීමට (Update කරගැනීමට)
   const [loadedDraftId, setLoadedDraftId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("pos_persistent_loadedDraftId") || null;
@@ -57,6 +56,9 @@ export default function POSPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
+
+  // Product details pahanasathi modal state
+  const [selectedProductDetails, setSelectedProductDetails] = useState<Product | null>(null);
 
   const [shopSettings, setShopSettings] = useState({
     shopName: "Sampath Auto Parts",
@@ -324,7 +326,6 @@ export default function POSPage() {
   const netTotal = Math.max(0, subTotal - discount);
   const balance = Math.max(0, cashPaid - netTotal);
 
-  // ඩ්‍රාෆ්ට් එකක් සේව් කිරීම හෝ Update කිරීම
   const handleSaveDraft = async () => {
     if (cart.length === 0) {
       alert("Cart is empty!");
@@ -337,7 +338,6 @@ export default function POSPage() {
     }
 
     try {
-      // දැනටමත් ලෝඩ් කර ඇති ඩ්‍රාෆ්ට් එකක් නම්, එම ID එකෙන්ම Update කරන්න
       if (loadedDraftId) {
         const draftRef = doc(db, "drafts", loadedDraftId);
         await updateDoc(draftRef, {
@@ -351,13 +351,12 @@ export default function POSPage() {
         return;
       }
 
-      // අලුතින් ඩ්‍රාෆ්ට් එකක් සේව් කිරීමට යාමේදී, එම වාහන අංකයෙන්ම වෙනත් ඩ්‍රාෆ්ට් එකක් තිබේදැයි පරීක්ෂා කිරීම
       const existingDraftWithSameTitle = drafts.find(
         (d) => d.title.trim().toUpperCase() === titleToSave
       );
 
       if (existingDraftWithSameTitle) {
-        alert(`Error: '${titleToSave' වාහන අංකයෙන් දැනටමත් ඩ්‍රාෆ්ට් බිල්පතක් පවතී! කරුණාකර එය ਲੋඩ් කර අලුත් බඩු ඇඩ් කරන්න.`);
+        alert(`Error: '${titleToSave}' vehicle number is already saved as a draft! Please load it to update.`);
         return;
       }
 
@@ -379,7 +378,7 @@ export default function POSPage() {
     setCart(draft.cart || []);
     setDiscount(draft.discount || 0);
     setCustomerName(draft.title || "");
-    setLoadedDraftId(draft.id || null); // ඩ්‍රාෆ්ට් එකේ ID එක මතක තබා ගැනීම
+    setLoadedDraftId(draft.id || null);
     setShowDraftsModal(false);
     setActiveTab("billing"); 
   };
@@ -492,7 +491,7 @@ export default function POSPage() {
     );
   };
 
-  const handleOpenDirectWhatsApp = () => {
+  const handleOpenDirectWhatsApp = async () => {
     if (!whatsappNo.trim()) {
       alert("Please enter customer WhatsApp mobile number!");
       return;
@@ -501,6 +500,14 @@ export default function POSPage() {
     let phone = whatsappNo.trim().replace(/[^0-9]/g, "");
     if (phone.startsWith("0")) {
       phone = "94" + phone.slice(1);
+    }
+
+    if (loadedDraftId) {
+      try {
+        await deleteDoc(doc(db, "drafts", loadedDraftId));
+      } catch (err) {
+        console.warn("Could not delete processed draft:", err);
+      }
     }
 
     const messageText = encodeURIComponent(generateWhatsAppText());
@@ -532,7 +539,6 @@ export default function POSPage() {
     localStorage.setItem("pos_invoice_no", nextInvoiceNo.toString());
     setCurrentInvoiceNo(nextInvoiceNo);
 
-    // බිල් පත් කළ පසු අදාළ ඩ්‍රාෆ්ට් එක ලෝඩ් කර තිබුණි නම් එයින් ඩ්‍රාෆ්ට් එක ඉවත් කිරීම (Delete කිරීම)
     if (loadedDraftId) {
       try {
         await deleteDoc(doc(db, "drafts", loadedDraftId));
@@ -789,12 +795,25 @@ export default function POSPage() {
                   <div
                     key={product.id}
                     onClick={(e) => handleIncreaseQty(product, e)}
-                    className={`p-3 sm:p-4 border rounded-2xl text-left transition bg-gray-50/50 dark:bg-gray-700/40 flex flex-col justify-between cursor-pointer select-none ${
+                    className={`p-3 sm:p-4 border rounded-2xl text-left transition bg-gray-50/50 dark:bg-gray-700/40 flex flex-col justify-between cursor-pointer select-none relative group ${
                       isInCart 
                         ? "border-red-500 bg-red-50/60 dark:bg-red-950/40 shadow-xs" 
                         : "border-gray-100 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/25 dark:hover:bg-blue-950/20"
                     }`}
                   >
+                    {/* Info Icon for viewing product details */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProductDetails(product);
+                      }}
+                      className="absolute top-2.5 right-2.5 p-1.5 bg-white/80 dark:bg-gray-800/80 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-lg shadow-xs transition"
+                      title="View Product Details"
+                    >
+                      <Info className="w-4 h-4" />
+                    </button>
+
                     <div>
                       {product.imageUrl && (
                         <div className="w-full h-20 sm:h-24 mb-2 bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 flex items-center justify-center">
@@ -952,6 +971,47 @@ export default function POSPage() {
         </div>
       </div>
 
+      {/* Product Details Modal */}
+      {selectedProductDetails && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-2xl max-w-md w-full shadow-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
+              <h3 className="font-bold text-base text-gray-900 dark:text-white flex items-center gap-2">
+                <Info className="w-5 h-5 text-blue-600" /> Product Details
+              </h3>
+              <button 
+                onClick={() => setSelectedProductDetails(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {selectedProductDetails.imageUrl && (
+              <div className="w-full h-36 bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 flex items-center justify-center">
+                <img src={selectedProductDetails.imageUrl} alt={selectedProductDetails.name} className="w-full h-full object-cover" />
+              </div>
+            )}
+
+            <div className="space-y-2 text-sm">
+              <p className="flex justify-between"><span className="text-gray-500">Part Number:</span> <span className="font-mono font-bold text-blue-600">{selectedProductDetails.partNumber || "-"}</span></p>
+              <p className="flex justify-between"><span className="text-gray-500">Name:</span> <span className="font-bold text-gray-800 dark:text-gray-100 text-right">{selectedProductDetails.name}</span></p>
+              <p className="flex justify-between"><span className="text-gray-500">Category:</span> <span className="font-semibold">{selectedProductDetails.category || "-"}</span></p>
+              <p className="flex justify-between"><span className="text-gray-500">Brand:</span> <span className="font-semibold">{selectedProductDetails.brand || "-"}</span></p>
+              <p className="flex justify-between"><span className="text-gray-500">Stock Qty:</span> <span className={`font-bold ${selectedProductDetails.stockQty > 0 ? "text-emerald-600" : "text-red-600"}`}>{selectedProductDetails.stockQty}</span></p>
+              <p className="flex justify-between"><span className="text-gray-500">Selling Price:</span> <span className="font-black text-emerald-600">LKR {(selectedProductDetails.sellingPrice || 0).toLocaleString()}</span></p>
+            </div>
+
+            <button
+              onClick={() => setSelectedProductDetails(null)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-xs mt-2"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {showWhatsAppConfirmModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 space-y-5">
@@ -965,7 +1025,7 @@ export default function POSPage() {
                     Send WhatsApp Receipt
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    ඔබ ලොගින් වී සිටින WhatsApp ගිණුම හරහා කෙලින්ම බිල්පත යවන්න.
+                    Send receipt directly using your logged-in WhatsApp account.
                   </p>
                 </div>
               </div>
@@ -985,7 +1045,7 @@ export default function POSPage() {
                 }}
                 className="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-2xl text-xs font-bold transition"
               >
-                Skip / මඟහරින්න
+                Skip
               </button>
               <button
                 onClick={handleOpenDirectWhatsApp}
