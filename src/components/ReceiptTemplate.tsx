@@ -14,6 +14,7 @@ interface ReceiptProps {
     netTotal: number;
     subTotal: number;
     discount: number;
+    laborCharge?: number; // වැඩ කුලිය සඳහා
     cashPaid?: number;
     balance?: number;
     cashier?: string;
@@ -137,6 +138,14 @@ export default function ReceiptTemplate({ invoice, onSettingsLoaded }: ReceiptPr
           <span>NET TOTAL:</span>
           <span>{currencySymbol} {invoice.netTotal?.toLocaleString()}</span>
         </div>
+
+        {/* වැඩ කුලිය රිසිට් පතේ පෙන්වීම (സിස්ටම් මුදලට එකතු නොවේ) */}
+        {Number(invoice.laborCharge) > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '11px', color: '#b45309', borderBottom: '1px dashed #d97706', paddingBottom: '4px', marginBottom: '6px' }}>
+            <span>Dadha (වැඩ කුලිය):</span>
+            <span>{currencySymbol} {Number(invoice.laborCharge).toLocaleString()}</span>
+          </div>
+        )}
 
         <div style={{ paddingTop: '4px', fontSize: '10px', color: '#374151' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
