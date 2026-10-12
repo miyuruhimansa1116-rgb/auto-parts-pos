@@ -1,4 +1,3 @@
-// src/app/pos/page.tsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -417,8 +416,8 @@ export default function POSPage() {
       const qty = Number(item.cartQty || item.qty || 1);
       const price = Number(item.sellingPrice || item.price || 0);
       const total = qty * price;
-      itemsText += `${index + 1}. ${item.name || item.itemName}\n`;
-      itemsText += `   ${qty} x ${price.toLocaleString()} = ${total.toLocaleString()}\n\n`;
+      itemsText += `${index + 1}.${item.name || item.itemName}\n`;
+      itemsText += `   ${qty} x ${price.toLocaleString()} =${total.toLocaleString()}\n\n`;
     });
 
     return (
@@ -433,12 +432,12 @@ export default function POSPage() {
       `*ITEMS:*\n\n` +
       itemsText +
       `--------------------------------\n` +
-      `Subtotal: ${currencySymbol} ${subTotal.toLocaleString()}\n` +
-      (Number(discount) > 0 ? `Discount: -${currencySymbol} ${discount.toLocaleString()}\n` : ``) +
-      `*NET TOTAL: ${currencySymbol} ${netTotal.toLocaleString()}*\n` +
+      `Subtotal: ${currencySymbol}${subTotal.toLocaleString()}\n` +
+      (Number(discount) > 0 ? `Discount: -${currencySymbol}${discount.toLocaleString()}\n` : ``) +
+      `*NET TOTAL: ${currencySymbol}${netTotal.toLocaleString()}*\n` +
       `--------------------------------\n` +
       `Payment Method: Cash\n` +
-      (cashPaid > 0 ? `Cash Tendered: ${currencySymbol} ${cashPaid.toLocaleString()}\n` : ``) +
+      (cashPaid > 0 ? `Cash Tendered: ${currencySymbol}${cashPaid.toLocaleString()}\n` : ``) +
       `Balance Change: ${currencySymbol} ${balance.toLocaleString()}\n` +
       `--------------------------------\n` +
       `${shopSettings.footerMessage}\n` +
@@ -446,8 +445,8 @@ export default function POSPage() {
     );
   };
 
-  // Firebase එකෙන් ඩයිනමික් ලෙස සර්වර් URL එක ලබාගෙන WhatsApp API Call එක යැවීම[cite: 6]
-  const handleSendWhatsAppViaAPI = async () => {
+  // ලොගින් වී සිටින WhatsApp (Web / Mobile App) එකෙන් කෙලින්ම යැවීම
+  const handleOpenDirectWhatsApp = () => {
     if (!whatsappNo.trim()) {
       alert("Please enter customer WhatsApp mobile number!");
       return;
@@ -458,48 +457,14 @@ export default function POSPage() {
       phone = "94" + phone.slice(1);
     }
 
-    const messageText = generateWhatsAppText();
-    setIsSendingWhatsApp(true);
+    const messageText = encodeURIComponent(generateWhatsAppText());
+    const waUrl = `https://wa.me/${phone}?text=${messageText}`;
 
-    try {
-      // 1. Firebase එකෙන් current active server URL එක ලබා ගැනීම[cite: 6]
-      const configDoc = await getDoc(doc(db, "settings", "whatsapp_config"));
-      
-      if (!configDoc.exists()) {
-        alert("WhatsApp සර්වර් ලින්ක් එක ෆයර්බේස් එකේ හමුවුනේ නැත!");
-        setIsSendingWhatsApp(false);
-        return;
-      }
+    // නව ටැබ් එකකින් WhatsApp ඕපන් කිරීම
+    window.open(waUrl, "_blank");
 
-      const serverUrl = configDoc.data().serverUrl; // උදා: https://xxxx.free.pinggy.link හෝ Railway URL එක[cite: 6]
-
-      // 2. අදාළ ලින්ක් එකට WhatsApp API request එක යැවීම[cite: 6]
-      const response = await fetch(`${serverUrl}/send-message`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phone: phone,
-          message: messageText,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success !== false) {
-        alert("WhatsApp message sent successfully!");
-        setShowWhatsAppConfirmModal(false);
-        clearPersistentCart();
-      } else {
-        alert("Failed to send WhatsApp: " + (data.error || "Unknown error"));
-      }
-    } catch (error) {
-      console.error("WhatsApp API Error:", error);
-      alert("සර්වර් එක සමඟ සම්බන්ධ වීමේ දෝෂයක් ඇති විය!");
-    } finally {
-      setIsSendingWhatsApp(false);
-    }
+    setShowWhatsAppConfirmModal(false);
+    clearPersistentCart();
   };
 
   const handleCheckoutAndPrint = async () => {
@@ -943,10 +908,10 @@ export default function POSPage() {
                 </div>
                 <div>
                   <h3 className="font-extrabold text-base text-gray-900 dark:text-white">
-                    Send WhatsApp via Server
+                    Send WhatsApp Receipt
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Firebase එකෙන් active සර්වර් ලින්ක් එක ලබාගෙන පාරිභෝගිකයාට බිල්පත යවන්න.
+                    ඔබ ලොගින් වී සිටින WhatsApp ගිණුම හරහා කෙලින්ම බිල්පත යවන්න.
                   </p>
                 </div>
               </div>
@@ -964,25 +929,15 @@ export default function POSPage() {
                   setShowWhatsAppConfirmModal(false);
                   clearPersistentCart();
                 }}
-                disabled={isSendingWhatsApp}
                 className="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-2xl text-xs font-bold transition"
               >
                 Skip / මඟහරින්න
               </button>
               <button
-                onClick={handleSendWhatsAppViaAPI}
-                disabled={isSendingWhatsApp}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                onClick={handleOpenDirectWhatsApp}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
               >
-                {isSendingWhatsApp ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" /> Send via Server
-                  </>
-                )}
+                <Send className="w-4 h-4" /> Send via WhatsApp
               </button>
             </div>
           </div>
