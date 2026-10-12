@@ -108,10 +108,6 @@ export default function ReceiptTemplate({ invoice, onSettingsLoaded }: ReceiptPr
                   <span style={{ display: 'inline-block', width: '20px', color: '#4b5563' }}>{idx + 1}.</span>
                   <span>{item.name || item.itemName}</span>
                 </div>
-                {item.partNumber && (
-                  <div style={{ fontSize: '9px', color: '#4b5563', paddingLeft: '20px' }}>
-                  </div>
-                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#374151', paddingLeft: '20px', marginTop: '2px' }}>
                   <span>{qty} x {price.toLocaleString()}</span>
                   <span style={{ fontWeight: 600, color: '#111827' }}>{total.toLocaleString()}</span>
@@ -134,18 +130,16 @@ export default function ReceiptTemplate({ invoice, onSettingsLoaded }: ReceiptPr
             <span>-{currencySymbol} {invoice.discount?.toLocaleString()}</span>
           </div>
         )}
+        {Number(invoice.laborCharge) > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#b45309', fontWeight: 600, marginBottom: '4px' }}>
+            <span>වැඩ කුලිය:</span>
+            <span>+{currencySymbol} {Number(invoice.laborCharge).toLocaleString()}</span>
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '12px', borderTop: '1px solid #111827', borderBottom: '1px solid #111827', padding: '6px 0', margin: '6px 0' }}>
           <span>NET TOTAL:</span>
           <span>{currencySymbol} {invoice.netTotal?.toLocaleString()}</span>
         </div>
-
-        {/* වැඩ කුලිය රිසිට් පතේ පෙන්වීම (സിස්ටම් මුදලට එකතු නොවේ) */}
-        {Number(invoice.laborCharge) > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '11px', color: '#b45309', borderBottom: '1px dashed #d97706', paddingBottom: '4px', marginBottom: '6px' }}>
-            <span>වැඩ කුලිය:</span>
-            <span>{currencySymbol} {Number(invoice.laborCharge).toLocaleString()}</span>
-          </div>
-        )}
 
         <div style={{ paddingTop: '4px', fontSize: '10px', color: '#374151' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
