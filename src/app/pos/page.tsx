@@ -85,7 +85,6 @@ export default function POSPage() {
     return 0;
   });
 
-  // වැඩ කුලිය සඳහා state එක (සිස්ටම් සල්ලි වලට සම්බන්ධ නොවේ)[cite: 5]
   const [laborCharge, setLaborCharge] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("pos_persistent_laborCharge");
@@ -338,8 +337,14 @@ export default function POSPage() {
   };
 
   const subTotal = cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0);
-  const netTotal = Math.max(0, subTotal - discount); 
-  const balance = Math.max(0, cashPaid - netTotal);
+  
+  // සිස්ටම් එකේ සේල්ස් රිපෝර්ට් වලට යන Net Total එක (වැඩ කුලිය මෙයට එකතු වන්නේ නැත)
+  const systemNetTotal = Math.max(0, subTotal - discount); 
+  
+  // බිල්පතේ මුද්‍රණය වන සහ පාරිභෝගිකයාට පෙන්වන සම්පූර්ණ එකතුව (වැඩ කුලිය සමඟ)
+  const displayTotalWithLabor = systemNetTotal + Number(laborCharge || 0);
+  
+  const balance = Math.max(0, cashPaid - displayTotalWithLabor);
 
   const handleSaveDraft = async () => {
     if (cart.length === 0) {
@@ -498,8 +503,8 @@ export default function POSPage() {
       `--------------------------------\n` +
       `Subtotal: ${currencySymbol}${subTotal.toLocaleString()}\n` +
       (Number(discount) > 0 ? `Discount: -${currencySymbol}${discount.toLocaleString()}\n` : ``) +
-      `*NET TOTAL: ${currencySymbol}${netTotal.toLocaleString()}*\n` +
-      (Number(laborCharge) > 0 ? `වැඩ කුලිය: ${currencySymbol}${Number(laborCharge).toLocaleString()}\n` : ``) +
+      (Number(laborCharge) > 0 ? `වැඩ කුලිය: +${currencySymbol}${Number(laborCharge).toLocaleString()}\n` : ``) +
+      `*NET TOTAL: ${currencySymbol}${displayTotalWithLabor.toLocaleString()}*\n` +
       `--------------------------------\n` +
       `Payment Method: Cash\n` +
       (cashPaid > 0 ? `Cash Tendered: ${currencySymbol}${cashPaid.toLocaleString()}\n` : ``) +
@@ -546,8 +551,8 @@ export default function POSPage() {
       return;
     }
 
-    if (cashPaid < netTotal) {
-      setCheckoutError(`Cash paid amount is less than the net total (Rs. ${netTotal.toLocaleString()})!`);
+    if (cashPaid < displayTotalWithLabor) {
+      setCheckoutError(`Cash paid amount is less than the net total (Rs. ${displayTotalWithLabor.toLocaleString()})!`);
       return;
     }
 
@@ -571,6 +576,8 @@ export default function POSPage() {
 
     window.print();
 
+    // සේල්ස් රිපෝර්ට් සඳහා netTotal ලෙස යන්නේ වැඩ කුලිය නැති systemNetTotal එකයි. 
+    // නමුත් laborCharge එකත් මෙහි සුරැකෙන බැවින් පසුව බිල් එක ඕපන් කරද්දී වැඩ කුලිය නැවත බිල්පතට පෙන්විය හැක.
     const saleData = {
       invoiceNo: formattedInvoiceNo,
       createdAt: finalDateObj.toISOString(),
@@ -578,8 +585,8 @@ export default function POSPage() {
       items: cart,
       subTotal,
       discount,
-      laborCharge, // සේල්ස් රිපෝර්ට් වල බිල් එක ඕපන් කරද්දී පෙන්වීමට සුරැකේ[cite: 5]
-      netTotal,
+      laborCharge, 
+      netTotal: systemNetTotal, // සිස්ටම් රිපෝර්ට් සඳහා වැඩ කුලිය නැති ගණන පමණක් යයි
       cashPaid,
       balance,
     };
@@ -663,6 +670,7 @@ export default function POSPage() {
     });
   }, [products, search, selectedCategory, selectedBrand, sortBy, cart]);
 
+  // රිසිට් පතට යවන ඩේටා (මෙහි netTotal ලෙස displayTotalWithLabor යැවීමෙන් මුද්‍රණයේදී වැඩ කුලිය එකතු වී පෙන්වයි)
   const currentInvoiceData = {
     invoiceNo: `SAP-${currentInvoiceNo}`,
     customerName: customerName.trim() ? customerName.trim() : "CASH CUSTOMER",
@@ -671,7 +679,7 @@ export default function POSPage() {
     subTotal: subTotal,
     discount: discount,
     laborCharge: laborCharge, 
-    netTotal: netTotal,
+    netTotal: displayTotalWithLabor, 
     cashPaid: cashPaid,
     balance: balance,
     createdAt: enableCustomDate ? new Date(customBillDate) : new Date(),
@@ -938,7 +946,7 @@ export default function POSPage() {
                 />
               </div>
 
-              {/* වැඩ කුලිය ඇතුළත් කිරීම සඳහා වෙනම කොටස */}
+              {/* වැඩ කුලිය ඇතුළත් කිරීම සඳහා කොටස */}
               <div className="flex justify-between items-center text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded-xl border border-amber-200 dark:border-amber-900">
                 <span className="text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5 text-xs">
                   <Wrench className="w-3.5 h-3.5" /> වැඩ කුලිය:
@@ -1112,7 +1120,7 @@ export default function POSPage() {
                 <p className="text-center text-gray-400 py-10 text-sm">No draft bills available.</p>
               ) : (
                 drafts.map((d) => {
-                  const draftTotal = d.cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0) - (d.discount || 0);
+                  const draftTotal = d.cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0) - (d.discount || 0) + (d.laborCharge || 0);
                   return (
                     <div 
                       key={d.id} 
@@ -1124,7 +1132,6 @@ export default function POSPage() {
                         </h4>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           Items: <span className="font-semibold">{d.cart.length}</span> | Net Total: <span className="font-bold text-emerald-600 dark:text-emerald-400">LKR {draftTotal.toLocaleString()}</span>
-                          {d.laborCharge ? ` | Dadha: LKR ${d.laborCharge.toLocaleString()}` : ""}
                         </p>
                       </div>
                       
