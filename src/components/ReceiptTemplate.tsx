@@ -14,7 +14,8 @@ interface ReceiptProps {
     netTotal: number;
     subTotal: number;
     discount: number;
-    laborCharge?: number; // වැඩ කුලිය සඳහා
+    laborCharge?: number;
+    extraCharges?: { id: string; name: string; amount: number }[];
     cashPaid?: number;
     balance?: number;
     cashier?: string;
@@ -136,6 +137,12 @@ export default function ReceiptTemplate({ invoice, onSettingsLoaded }: ReceiptPr
             <span>+{currencySymbol} {Number(invoice.laborCharge).toLocaleString()}</span>
           </div>
         )}
+        {invoice.extraCharges && invoice.extraCharges.map((ex, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#4338ca', fontWeight: 600, marginBottom: '4px' }}>
+            <span>{ex.name}:</span>
+            <span>+{currencySymbol} {ex.amount.toLocaleString()}</span>
+          </div>
+        ))}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '12px', borderTop: '1px solid #111827', borderBottom: '1px solid #111827', padding: '6px 0', margin: '6px 0' }}>
           <span>NET TOTAL:</span>
           <span>{currencySymbol} {invoice.netTotal?.toLocaleString()}</span>
