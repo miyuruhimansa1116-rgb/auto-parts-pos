@@ -32,12 +32,19 @@ interface CartItem extends Product {
   cartQty: number;
 }
 
+interface ExtraCharge {
+  id: string;
+  name: string;
+  amount: number;
+}
+
 interface DraftBill {
   id?: string;
   title: string;
   cart: CartItem[];
   discount: number;
   laborCharge?: number;
+  extraCharges?: ExtraCharge[];
   createdAt: any;
 }
 
@@ -92,6 +99,18 @@ export default function POSPage() {
     }
     return 0;
   });
+
+  // පට්ටල් වැඩ වැනි වෙනත් අතිරේක ගාස්තු සඳහා state එක
+  const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("pos_persistent_extraCharges");
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  const [newExtraName, setNewExtraName] = useState("");
+  const [newExtraAmount, setNewExtraAmount] = useState<number | "">("");
 
   const [cashPaid, setCashPaid] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -156,6 +175,10 @@ export default function POSPage() {
   }, [laborCharge]);
 
   useEffect(() => {
+    localStorage.setItem("pos_persistent_extraCharges", JSON.stringify(extraCharges));
+  }, [extraCharges]);
+
+  useEffect(() => {
     localStorage.setItem("pos_persistent_cashPaid", cashPaid.toString());
   }, [cashPaid]);
 
@@ -187,6 +210,7 @@ export default function POSPage() {
     setCart([]);
     setDiscount(0);
     setLaborCharge(0);
+    setExtraCharges([]);
     setCashPaid(0);
     setCustomerName("");
     setWhatsappNo("");
@@ -195,12 +219,32 @@ export default function POSPage() {
     localStorage.removeItem("pos_persistent_cart");
     localStorage.removeItem("pos_persistent_discount");
     localStorage.removeItem("pos_persistent_laborCharge");
+    localStorage.removeItem("pos_persistent_extraCharges");
     localStorage.removeItem("pos_persistent_cashPaid");
     localStorage.removeItem("pos_persistent_customerName");
     localStorage.removeItem("pos_persistent_whatsappNo");
     localStorage.removeItem("pos_persistent_loadedDraftId");
     localStorage.removeItem("pos_persistent_enableCustomDate");
     localStorage.removeItem("pos_persistent_customBillDate");
+  };
+
+  const handleAddExtraCharge = () => {
+    if (!newExtraName.trim() || newExtraAmount === "" || Number(newExtraAmount) <= 0) {
+      alert("කරුණාකර සේවාවේ නම සහ නිවැරදි මුදලක් ඇතුළත් කරන්න!");
+      return;
+    }
+    const newItem: ExtraCharge = {
+      id: Date.now().toString(),
+      name: newExtraName.trim(),
+      amount: Number(newExtraAmount),
+    };
+    setExtraCharges([...extraCharges, newItem]);
+    setNewExtraName("");
+    setNewExtraAmount("");
+  };
+
+  const handleRemoveExtraCharge = (id: string) => {
+    setExtraCharges(extraCharges.filter((item) => item.id !== id));
   };
 
   const syncOfflineSales = async () => {
@@ -338,13 +382,16 @@ export default function POSPage() {
 
   const subTotal = cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0);
   
-  // සිස්ටම් එකේ සේල්ස් රිපෝර්ට් වලට යන Net Total එක (වැඩ කුලිය මෙයට එකතු වන්නේ නැත)
+  // සේල්ස් රිපෝර්ට් සඳහා යන Net Total එක (බඩු වල මුදල පමණි)
   const systemNetTotal = Math.max(0, subTotal - discount); 
   
-  // බිල්පතේ මුද්‍රණය වන සහ පාරිභෝගිකයාට පෙන්වන සම්පූර්ණ එකතුව (වැඩ කුලිය සමඟ)
-  const displayTotalWithLabor = systemNetTotal + Number(laborCharge || 0);
+  // සියලුම අතිරේක ගාස්තු වල එකතුව
+  const totalExtraCharges = extraCharges.reduce((acc, item) => acc + item.amount, 0);
+
+  // බිල්පතේ මුද්‍රණය වන සහ පාරිභෝගිකයාට පෙන්වන සම්පූර්ණ එකතුව (වැඩ කුලිය + පට්ටල් වැඩ ඇතුළු සියලුම අතිරේක ගාස්තු සමඟ)
+  const displayTotalWithAll = systemNetTotal + Number(laborCharge || 0) + totalExtraCharges;
   
-  const balance = Math.max(0, cashPaid - displayTotalWithLabor);
+  const balance = Math.max(0, cashPaid - displayTotalWithAll);
 
   const handleSaveDraft = async () => {
     if (cart.length === 0) {
@@ -365,6 +412,7 @@ export default function POSPage() {
           cart,
           discount,
           laborCharge,
+          extraCharges,
         });
         alert("Draft bill successfully updated!");
         setDraftTitle("");
@@ -386,6 +434,7 @@ export default function POSPage() {
         cart,
         discount,
         laborCharge,
+        extraCharges,
         createdAt: enableCustomDate ? new Date(customBillDate) : new Date(),
       });
       alert("Bill saved as Draft!");
@@ -400,6 +449,7 @@ export default function POSPage() {
     setCart(draft.cart || []);
     setDiscount(draft.discount || 0);
     setLaborCharge(draft.laborCharge || 0);
+    setExtraCharges(draft.extraCharges || []);
     setCustomerName(draft.title || "");
     setLoadedDraftId(draft.id || null);
     setShowDraftsModal(false);
@@ -489,6 +539,14 @@ export default function POSPage() {
       itemsText += `   ${qty} x ${price.toLocaleString()} =${total.toLocaleString()}\n\n`;
     });
 
+    let extraText = "";
+    if (Number(laborCharge) > 0) {
+      extraText += `වැඩ කුලිය: +${currencySymbol}${Number(laborCharge).toLocaleString()}\n`;
+    }
+    extraCharges.forEach((ex) => {
+      extraText += `${ex.name}: +${currencySymbol}${ex.amount.toLocaleString()}\n`;
+    });
+
     return (
       `*${shopSettings.shopName}*\n` +
       `${shopSettings.address}\n` +
@@ -503,8 +561,8 @@ export default function POSPage() {
       `--------------------------------\n` +
       `Subtotal: ${currencySymbol}${subTotal.toLocaleString()}\n` +
       (Number(discount) > 0 ? `Discount: -${currencySymbol}${discount.toLocaleString()}\n` : ``) +
-      (Number(laborCharge) > 0 ? `වැඩ කුලිය: +${currencySymbol}${Number(laborCharge).toLocaleString()}\n` : ``) +
-      `*NET TOTAL: ${currencySymbol}${displayTotalWithLabor.toLocaleString()}*\n` +
+      extraText +
+      `*NET TOTAL: ${currencySymbol}${displayTotalWithAll.toLocaleString()}*\n` +
       `--------------------------------\n` +
       `Payment Method: Cash\n` +
       (cashPaid > 0 ? `Cash Tendered: ${currencySymbol}${cashPaid.toLocaleString()}\n` : ``) +
@@ -551,8 +609,8 @@ export default function POSPage() {
       return;
     }
 
-    if (cashPaid < displayTotalWithLabor) {
-      setCheckoutError(`Cash paid amount is less than the net total (Rs. ${displayTotalWithLabor.toLocaleString()})!`);
+    if (cashPaid < displayTotalWithAll) {
+      setCheckoutError(`Cash paid amount is less than the net total (Rs. ${displayTotalWithAll.toLocaleString()})!`);
       return;
     }
 
@@ -576,8 +634,7 @@ export default function POSPage() {
 
     window.print();
 
-    // සේල්ස් රිපෝර්ට් සඳහා netTotal ලෙස යන්නේ වැඩ කුලිය නැති systemNetTotal එකයි. 
-    // නමුත් laborCharge එකත් මෙහි සුරැකෙන බැවින් පසුව බිල් එක ඕපන් කරද්දී වැඩ කුලිය නැවත බිල්පතට පෙන්විය හැක.
+    // සේල්ස් රිපෝර්ට් සඳහා netTotal ලෙස යන්නේ වැඩ කුලිය සහ පට්ටල් වැඩ නැති systemNetTotal එකයි.
     const saleData = {
       invoiceNo: formattedInvoiceNo,
       createdAt: finalDateObj.toISOString(),
@@ -586,7 +643,8 @@ export default function POSPage() {
       subTotal,
       discount,
       laborCharge, 
-      netTotal: systemNetTotal, // සිස්ටම් රිපෝර්ට් සඳහා වැඩ කුලිය නැති ගණන පමණක් යයි
+      extraCharges,
+      netTotal: systemNetTotal, 
       cashPaid,
       balance,
     };
@@ -670,7 +728,7 @@ export default function POSPage() {
     });
   }, [products, search, selectedCategory, selectedBrand, sortBy, cart]);
 
-  // රිසිට් පතට යවන ඩේටා (මෙහි netTotal ලෙස displayTotalWithLabor යැවීමෙන් මුද්‍රණයේදී වැඩ කුලිය එකතු වී පෙන්වයි)
+  // රිසිට් පතට යවන ඩේටා
   const currentInvoiceData = {
     invoiceNo: `SAP-${currentInvoiceNo}`,
     customerName: customerName.trim() ? customerName.trim() : "CASH CUSTOMER",
@@ -679,7 +737,8 @@ export default function POSPage() {
     subTotal: subTotal,
     discount: discount,
     laborCharge: laborCharge, 
-    netTotal: displayTotalWithLabor, 
+    extraCharges: extraCharges,
+    netTotal: displayTotalWithAll, 
     cashPaid: cashPaid,
     balance: balance,
     createdAt: enableCustomDate ? new Date(customBillDate) : new Date(),
@@ -946,7 +1005,7 @@ export default function POSPage() {
                 />
               </div>
 
-              {/* වැඩ කුලිය ඇතුළත් කිරීම සඳහා කොටස */}
+              {/* වැඩ කුලිය සඳහා කොටස */}
               <div className="flex justify-between items-center text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded-xl border border-amber-200 dark:border-amber-900">
                 <span className="text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5 text-xs">
                   <Wrench className="w-3.5 h-3.5" /> වැඩ කුලිය:
@@ -958,6 +1017,52 @@ export default function POSPage() {
                   placeholder="0"
                   className="w-32 p-1.5 border border-amber-300 dark:border-amber-700 rounded-lg text-right text-xs sm:text-sm font-bold bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 outline-none focus:ring-2 focus:ring-amber-500"
                 />
+              </div>
+
+              {/* පට්ටල් වැඩ හෝ වෙනත් අතිරේක සේවා ගාස්තු එකතු කිරීමේ කොටස */}
+              <div className="space-y-2 bg-indigo-50/50 dark:bg-indigo-950/20 p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-900">
+                <span className="text-indigo-700 dark:text-indigo-300 font-bold text-xs block">අතිරේක සේවා / පට්ටල් වැඩ:</span>
+                
+                {extraCharges.map((ex) => (
+                  <div key={ex.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900 text-xs">
+                    <span className="font-semibold text-gray-700 dark:text-gray-200">{ex.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-indigo-600">Rs. {ex.amount.toLocaleString()}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => handleRemoveExtraCharge(ex.id)}
+                        className="text-red-500 hover:text-red-700 p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex gap-1.5 pt-1">
+                  <input
+                    type="text"
+                    placeholder="සේවාවේ නම (උදා: Lathe Work)"
+                    value={newExtraName}
+                    onChange={(e) => setNewExtraName(e.target.value)}
+                    className="flex-1 p-1.5 border border-indigo-300 dark:border-indigo-700 rounded-lg text-xs bg-white dark:bg-gray-700 outline-none"
+                  />
+                  <input
+                    type="number"
+                    placeholder="ගණන"
+                    value={newExtraAmount === "" ? "" : newExtraAmount}
+                    onChange={(e) => setNewExtraAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="w-20 p-1.5 border border-indigo-300 dark:border-indigo-700 rounded-lg text-xs bg-white dark:bg-gray-700 outline-none text-right font-bold"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddExtraCharge}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center"
+                    title="Add Service"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="flex justify-between items-center text-sm">
@@ -1120,7 +1225,8 @@ export default function POSPage() {
                 <p className="text-center text-gray-400 py-10 text-sm">No draft bills available.</p>
               ) : (
                 drafts.map((d) => {
-                  const draftTotal = d.cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0) - (d.discount || 0) + (d.laborCharge || 0);
+                  const extraSum = (d.extraCharges || []).reduce((acc: number, curr: any) => acc + curr.amount, 0);
+                  const draftTotal = d.cart.reduce((acc, item) => acc + item.sellingPrice * item.cartQty, 0) - (d.discount || 0) + (d.laborCharge || 0) + extraSum;
                   return (
                     <div 
                       key={d.id} 
