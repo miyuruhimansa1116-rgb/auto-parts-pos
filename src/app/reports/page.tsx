@@ -38,6 +38,8 @@ interface SaleTransaction {
   netTotal: number;
   subTotal: number;
   discount: number;
+  laborCharge?: number;
+  extraCharges?: { id: string; name: string; amount: number }[];
   cashPaid: number;
   balance: number;
   createdAt: any;
@@ -47,16 +49,10 @@ export default function SalesReportsPage() {
   const [sales, setSales] = useState<SaleTransaction[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   
-  // User Role State for Permission Control
   const [userRole, setUserRole] = useState("counter");
-  
-  // Dark Mode State
   const [darkMode, setDarkMode] = useState(false);
-
-  // Modal / Selected Invoice State for viewing details & reprinting
   const [selectedInvoice, setSelectedInvoice] = useState<SaleTransaction | null>(null);
 
-  // Filter States
   const [dateRange, setDateRange] = useState<"today" | "yesterday" | "last7" | "thisMonth" | "custom">("thisMonth");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -64,10 +60,8 @@ export default function SalesReportsPage() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Category View Toggle State ("revenue" හෝ "profit")
   const [categoryViewMode, setCategoryViewMode] = useState<"revenue" | "profit">("revenue");
 
-  // Get User Role, Theme preference and Business Settings on load
   useEffect(() => {
     const role = localStorage.getItem("userRole") || "counter";
     setUserRole(role);
@@ -78,14 +72,12 @@ export default function SalesReportsPage() {
     }
   }, []);
 
-  // Toggle Dark Mode Function
   const toggleDarkMode = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
     localStorage.setItem("theme", newMode ? "dark" : "light");
   };
 
-  // Fetch Sales Data (Online Firestore + LocalStorage Offline Sales with Duplicate Prevention)
   useEffect(() => {
     const fetchSalesReports = async () => {
       try {
@@ -133,6 +125,8 @@ export default function SalesReportsPage() {
             netTotal,
             subTotal: Number(data.subTotal || netTotal),
             discount: Number(data.discount || 0),
+            laborCharge: Number(data.laborCharge || 0),
+            extraCharges: data.extraCharges || [],
             cashPaid: Number(data.cashPaid || netTotal),
             balance: Number(data.balance || 0),
             createdAt: rawCreatedAt,
@@ -164,7 +158,6 @@ export default function SalesReportsPage() {
 
         localStorage.setItem("pos_offline_sales", JSON.stringify(remainingOfflineSales));
 
-        // Sort sales by invoiceNo in ascending order (e.g., SAP-01, SAP-02, SAP-03)
         allSales.sort((a, b) => a.invoiceNo.localeCompare(b.invoiceNo, undefined, { numeric: true, sensitivity: 'base' }));
 
         setSales(allSales);
@@ -177,7 +170,6 @@ export default function SalesReportsPage() {
     fetchSalesReports();
   }, []);
 
-  // Delete Sale Invoice Function (Restricted to Admin only)
   const handleDeleteSale = async (docId: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
@@ -209,7 +201,6 @@ export default function SalesReportsPage() {
     }
   };
 
-  // Filter Logic (Sorted by invoiceNo)
   const filteredSales = useMemo(() => {
     const now = new Date();
 
@@ -265,11 +256,9 @@ export default function SalesReportsPage() {
       return matchesDate && matchesPayment && matchesCategory && matchesSearch;
     });
 
-    // Ensure sorted order by invoiceNo
     return filtered.sort((a, b) => a.invoiceNo.localeCompare(b.invoiceNo, undefined, { numeric: true, sensitivity: 'base' }));
   }, [sales, dateRange, startDate, endDate, filterPayment, filterCategory, searchQuery]);
 
-  // Summary Metrics Calculation
   const metrics = useMemo(() => {
     let totalRevenue = 0;
     let totalQty = 0;
@@ -292,7 +281,6 @@ export default function SalesReportsPage() {
     return { totalRevenue, totalQty, totalOrders, avgOrderValue, totalProfit };
   }, [filteredSales]);
 
-  // Category Breakdown Summary (Revenue & Profit calculations)
   const categoryBreakdown = useMemo(() => {
     const revenueMap: Record<string, number> = {};
     const profitMap: Record<string, number> = {};
@@ -319,7 +307,6 @@ export default function SalesReportsPage() {
     }
   }, [filteredSales, categoryViewMode]);
 
-  // Top 5 Items Summary
   const topItems = useMemo(() => {
     const map: Record<string, { qty: number; total: number }> = {};
     filteredSales.forEach((sale) => {
@@ -339,7 +326,6 @@ export default function SalesReportsPage() {
       .slice(0, 5);
   }, [filteredSales]);
 
-  // CSV Export Function
   const exportCSV = () => {
     const headers = ["Date,Invoice #,Customer,Payment Method,Total Items,Net Total\n"];
     const rows = filteredSales.map((s) => {
@@ -356,7 +342,6 @@ export default function SalesReportsPage() {
     a.click();
   };
 
-  // Print Specific Invoice
   const handlePrintInvoice = (invoice: SaleTransaction) => {
     setSelectedInvoice(invoice);
     setTimeout(() => {
@@ -587,7 +572,6 @@ export default function SalesReportsPage() {
                 {categoryViewMode === "revenue" ? "Revenue by Category" : "Profit by Category"}
               </h3>
               
-              {/* Revenue & Profit Switcher Toggle */}
               <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
                 <button
                   onClick={() => setCategoryViewMode("revenue")}
