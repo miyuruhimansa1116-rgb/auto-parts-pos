@@ -61,6 +61,15 @@ interface ProductItem {
   brand?: string;
 }
 
+interface TransactionItem {
+  id?: string;
+  type: "expense" | "income";
+  amount: number;
+  description: string;
+  supplierName?: string;
+  createdAt: any;
+}
+
 const money = (value: number) =>
   `Rs. ${Number(value || 0).toLocaleString("en-LK")}`;
 
@@ -82,6 +91,7 @@ export default function DashboardPage() {
   const [lowStockProducts, setLowStockProducts] = useState<ProductItem[]>([]);
   const [sales, setSales] = useState<SaleItem[]>([]);
   const [purchases, setPurchases] = useState<PurchaseItem[]>([]);
+  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [productsMap, setProductsMap] = useState<
     Record<string, { buyingPrice: number; sellingPrice: number }>
   >({});
@@ -176,6 +186,17 @@ export default function DashboardPage() {
         );
       } catch {
         setPurchases([]);
+      }
+
+      try {
+        const txSnapshot = await getDocs(collection(db, "transactions"));
+        const txList: TransactionItem[] = [];
+        txSnapshot.forEach((doc) => {
+          txList.push({ id: doc.id, ...doc.data() } as TransactionItem);
+        });
+        setTransactions(txList);
+      } catch {
+        setTransactions([]);
       }
     } catch (error) {
       console.error("Dashboard Data Fetch Error:", error);
@@ -349,6 +370,22 @@ export default function DashboardPage() {
       allTimePurchasesCost: totalPurchasesCost,
     };
   }, [sales, purchases, productsMap]);
+
+  // Cash in Hand calculation: (Total Sales Cash + Extra Incomes) - (Total Purchases Cost + Extra Expenses)
+  const cashInHand = useMemo(() => {
+    const totalSalesCash = sales.reduce((sum, s) => sum + getSaleTotal(s), 0);
+    const totalPurchasesCost = purchases.reduce((sum, p) => sum + Number(p.totalCost || 0), 0);
+    
+    const extraIncomes = transactions
+      .filter((tx) => tx.type === "income")
+      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+    const extraExpenses = transactions
+      .filter((tx) => tx.type === "expense")
+      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+    return (totalSalesCash + extraIncomes) - (totalPurchasesCost + extraExpenses);
+  }, [sales, purchases, transactions]);
 
   const periodProfit = deductExpenses ? allTimeProfit - allTimePurchasesCost : periodGrossProfit;
 
@@ -623,6 +660,23 @@ export default function DashboardPage() {
             <p className="mt-1 text-xs text-slate-400">Sales income</p>
           </div>
 
+          {/* Cash in Hand */}
+          <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-start justify-between">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300">
+                <DollarSign className="h-5 w-5" />
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
+            </div>
+            <p className="mt-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+              Cash in Hand
+            </p>
+            <p className="mt-1 truncate text-2xl font-black tracking-tight text-indigo-600 dark:text-indigo-400">
+              {money(cashInHand)}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">Available net cash</p>
+          </div>
+
           {/* Estimated Profit / Net Profit Card */}
           <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
             <div>
@@ -714,27 +768,6 @@ export default function DashboardPage() {
               {totalProducts.toLocaleString()}
             </p>
             <p className="mt-1 text-xs text-slate-400">Inventory items</p>
-          </div>
-
-          {/* Low Stock */}
-          <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-start justify-between">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                lowStockCount > 0
-                  ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300"
-                  : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300"
-              }`}>
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-slate-500" />
-            </div>
-            <p className="mt-4 text-xs font-bold uppercase tracking-wider text-slate-400">
-              Low Stock
-            </p>
-            <p className="mt-1 truncate text-2xl font-black tracking-tight">
-              {lowStockCount.toLocaleString()}
-            </p>
-            <p className="mt-1 text-xs text-slate-400">{lowStockCount ? "Needs attention" : "Stock is healthy"}</p>
           </div>
         </section>
 
