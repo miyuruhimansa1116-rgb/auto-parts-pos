@@ -371,21 +371,48 @@ export default function DashboardPage() {
     };
   }, [sales, purchases, productsMap]);
 
-  // Cash in Hand calculation: (Total Sales Cash + Extra Incomes) - (Total Purchases Cost + Extra Expenses)
+  // Cash in Hand calculation (without automatic purchase deductions)
   const cashInHand = useMemo(() => {
-    const totalSalesCash = sales.reduce((sum, s) => sum + getSaleTotal(s), 0);
-    const totalPurchasesCost = purchases.reduce((sum, p) => sum + Number(p.totalCost || 0), 0);
-    
-    const extraIncomes = transactions
+    const totalSalesCash = filteredSales.reduce((sum, s) => sum + getSaleTotal(s), 0);
+
+    const now = new Date();
+    const filteredTransactions = transactions.filter((tx) => {
+      const date = getDate(tx.createdAt);
+      if (!date) return false;
+      const time = date.getTime();
+
+      if (timeFilter === "1hour") return now.getTime() - time <= 60 * 60 * 1000;
+      if (timeFilter === "1day") {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        return time >= startOfToday;
+      }
+      if (timeFilter === "yesterday") {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const startOfYesterday = startOfToday - (24 * 60 * 60 * 1000);
+        return time >= startOfYesterday && time < startOfToday;
+      }
+      if (timeFilter === "1week") return now.getTime() - time <= 7 * 24 * 60 * 60 * 1000;
+      if (timeFilter === "1year") return now.getTime() - time <= 365 * 24 * 60 * 60 * 1000;
+      if (timeFilter === "custom") {
+        if (!startDateTime || !endDateTime) return true;
+        const start = new Date(startDateTime).getTime();
+        const end = new Date(endDateTime).getTime();
+        return time >= start && time <= end;
+      }
+      return true;
+    });
+
+    const extraIncomes = filteredTransactions
       .filter((tx) => tx.type === "income")
       .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
-    const extraExpenses = transactions
+    const extraExpenses = filteredTransactions
       .filter((tx) => tx.type === "expense")
       .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
-    return (totalSalesCash + extraIncomes) - (totalPurchasesCost + extraExpenses);
-  }, [sales, purchases, transactions]);
+    // සෙලර්ට මුදල් ගෙවන විට / වෙනත් වියදම් යොදන විට පමණක් Expenses හරහා අඩු වේ
+    return (totalSalesCash + extraIncomes) - extraExpenses;
+  }, [filteredSales, transactions, timeFilter, startDateTime, endDateTime]);
 
   const periodProfit = deductExpenses ? allTimeProfit - allTimePurchasesCost : periodGrossProfit;
 
