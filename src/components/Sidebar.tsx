@@ -1,211 +1,272 @@
-// src/app/components/Sidebar.tsx
+// src/app/transactions/page.tsx
 "use client";
 
+import { useEffect, useState } from "react";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Package, 
-  Truck, 
-  Building2, 
-  Tags,
-  MapPin,
-  BarChart3, 
-  FileSpreadsheet, 
-  UserPlus, 
-  Settings,
-  LogOut,
-  Menu,
-  X
-} from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 
-const navLinks = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/pos", label: "POS (Billing)", icon: ShoppingCart },
-  { href: "/products", label: "Products & Stock", icon: Package },
-  { href: "/purchases", label: "Purchases", icon: Truck },
-  { href: "/suppliers", label: "Suppliers", icon: Building2 },
-  { href: "/c&b", label: "Categories & Brands", icon: Tags },
-  { href: "/racks", label: "Rack Numbers", icon: MapPin },
-  { href: "/reports", label: "Sales Reports", icon: BarChart3 },
-  { href: "/reports/purchases", label: "Purchase Reports", icon: FileSpreadsheet },
-  { href: "/admin/users", label: "Create Users", icon: UserPlus },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+interface Transaction {
+  id?: string;
+  type: "expense" | "income";
+  amount: number;
+  description: string;
+  supplierName?: string;
+  createdAt: any;
+}
 
-export default function Sidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [userRole, setUserRole] = useState("counter");
-  const [username, setUsername] = useState("");
-  const [mounted, setMounted] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+interface Supplier {
+  id: string;
+  supplierName?: string;
+}
 
-  useEffect(() => {
-    setMounted(true);
-    const role = localStorage.getItem("userRole") || "counter";
-    const user = localStorage.getItem("username") || "";
-    setUserRole(role);
-    setUsername(user);
-  }, []);
+const money = (val: number) => `Rs. ${Number(val || 0).toLocaleString("en-LK")}`;
 
-  useEffect(() => {
-    setIsOpen(false);
-  }, [pathname]);
+export default function ExpensesAndIncomesPage() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogout = () => {
-    if (confirm("සැබැවින්ම පද්ධතියෙන් ඉවත් වීමට (Logout) අවශ්‍ය බව තහවුරු කරන්නද?")) {
-      localStorage.removeItem("userRole");
-      localStorage.removeItem("username");
-      router.push("/login");
+  // Form states
+  const [type, setType] = useState<"expense" | "income">("expense");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Fetch transactions
+      const txSnap = await getDocs(collection(db, "transactions"));
+      const txList: Transaction[] = [];
+      txSnap.forEach((doc) => {
+        txList.push({ id: doc.id, ...doc.data() } as Transaction);
+      });
+      setTransactions(
+        txList.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
+      );
+
+      // Fetch suppliers from purchases
+      const purSnap = await getDocs(collection(db, "purchases"));
+      const supSet = new Set<string>();
+      purSnap.forEach((doc) => {
+        const data = doc.data();
+        if (data.supplierName) supSet.add(data.supplierName);
+      });
+      setSuppliers(Array.from(supSet).map((name) => ({ id: name, supplierName: name })));
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filteredLinks = navLinks.filter((link) => {
-    if ((link.href === "/suppliers" || link.href === "/admin/users") && userRole !== "admin") {
-      return false;
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || !description) return;
+
+    try {
+      setSubmitting(true);
+      await addDoc(collection(db, "transactions"), {
+        type,
+        amount: Number(amount),
+        description,
+        supplierName: type === "expense" ? supplierName : "",
+        createdAt: serverTimestamp(),
+      });
+
+      setAmount("");
+      setDescription("");
+      setSupplierName("");
+      fetchData();
+    } catch (error) {
+      console.error("Error saving transaction:", error);
+    } finally {
+      setSubmitting(false);
     }
-    return true;
-  });
+  };
 
-  if (!mounted) {
-    return null;
-  }
-
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full justify-between py-2">
-      {/* Top Section: Header & Navigation */}
-      <div className="flex flex-col space-y-1.5 px-2.5">
-        {/* Header & Logo Section */}
-        <div className="p-3 border-b border-slate-100 dark:border-slate-800/80 mb-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/25 text-base">
-                S
-              </div>
-              <div className={`transition-all duration-300 whitespace-nowrap ${!isHovered ? "sm:opacity-0 sm:w-0 sm:overflow-hidden" : "opacity-100"}`}>
-                <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Sampath Auto Parts</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">POS & Inventory System</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setIsOpen(false)}
-              className="sm:hidden p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-              aria-label="Close Menu"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-
-          {/* User Info Badge */}
-          {username && (
-            <div className={`mt-2.5 bg-slate-50/80 dark:bg-slate-800/40 px-3 py-2 rounded-xl flex items-center justify-between text-xs border border-slate-200/60 dark:border-slate-700/50 transition-all duration-300 ${!isHovered ? "sm:opacity-0 sm:h-0 sm:p-0 sm:overflow-hidden sm:border-0 sm:mt-0" : "opacity-100"}`}>
-              <span className="text-slate-600 dark:text-slate-300 truncate max-w-[130px] text-xs">
-                User: <strong className="text-blue-600 dark:text-blue-400 font-bold">{username}</strong>
-              </span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase ${
-                userRole === "admin" 
-                  ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20" 
-                  : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-              }`}>
-                {userRole}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Navigation Links with Smooth Scrolling Support */}
-      <nav className="flex-1 px-2.5 space-y-1.5 text-sm font-medium overflow-y-auto overflow-x-hidden custom-scrollbar">
-        {filteredLinks.map((link) => {
-          const Icon = link.icon;
-          const isActive = pathname === link.href;
-
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              title={!isHovered ? link.label : ""}
-              className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-all duration-200 group ${
-                isActive
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-sm shadow-blue-500/25"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <Icon className={`w-5 h-5 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                isActive 
-                  ? "text-white" 
-                  : !isHovered 
-                    ? "text-blue-600 dark:text-blue-400" 
-                    : "text-slate-400 dark:text-slate-500 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-              }`} />
-              <span className={`transition-opacity duration-300 whitespace-nowrap text-sm font-medium ${!isHovered ? "sm:opacity-0 sm:w-0 sm:overflow-hidden" : "opacity-100"}`}>
-                {link.label}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Bottom Section: Logout Button & Footer */}
-      <div className="px-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 space-y-2 mt-auto">
-        <button
-          onClick={handleLogout}
-          title={!isHovered ? "Logout" : ""}
-          className="w-full py-3 bg-rose-50/80 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl text-sm font-bold transition-all duration-200 border border-rose-200/60 dark:border-rose-500/20 flex items-center justify-center gap-2.5 group"
-        >
-          <LogOut className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover:scale-110 text-rose-500" />
-          <span className={`transition-opacity duration-300 whitespace-nowrap ${!isHovered ? "sm:opacity-0 sm:w-0 sm:overflow-hidden" : "opacity-100"}`}>
-            Logout
-          </span>
-        </button>
-
-        <div className={`text-[10px] text-slate-400 dark:text-slate-500 text-center font-medium transition-opacity duration-300 ${!isHovered ? "sm:opacity-0 sm:h-0 sm:overflow-hidden" : "opacity-100"}`}>
-          Battuluoya System v1.0
-        </div>
-      </div>
-    </div>
-  );
+  const handleDelete = async (id?: string) => {
+    if (!id || !confirm("Are you sure you want to delete this record?")) return;
+    try {
+      await deleteDoc(doc(db, "transactions", id));
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting record:", error);
+    }
+  };
 
   return (
-    <>
-      {/* Mobile Top Navigation Bar */}
-      <div className="sm:hidden flex items-center justify-between p-3.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-blue-500/20">
-            S
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-4 sm:p-8">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-black">Expenses & Additional Incomes</h1>
+              <p className="text-xs text-slate-400">Manage extra expenses and shop incomes</p>
+            </div>
           </div>
-          <span className="font-bold text-sm text-slate-900 dark:text-white">Sampath Auto Parts</span>
         </div>
-        <button
-          onClick={() => setIsOpen(true)}
-          className="p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-          aria-label="Open Menu"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      </div>
 
-      {/* Mobile Fullscreen Sliding Menu */}
-      <div className={`fixed inset-0 z-50 bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-300 ease-in-out sm:hidden ${
-        isOpen ? "translate-x-0" : "translate-x-full"
-      }`}>
-        <SidebarContent />
-      </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Form */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-1">
+            <h2 className="text-base font-bold mb-4">Add New Record</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-500">Transaction Type</label>
+                <div className="mt-1 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setType("expense")}
+                    className={`rounded-xl py-2 text-xs font-bold transition ${
+                      type === "expense"
+                        ? "bg-red-600 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    }`}
+                  >
+                    Expense (-)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setType("income")}
+                    className={`rounded-xl py-2 text-xs font-bold transition ${
+                      type === "income"
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    }`}
+                  >
+                    Income (+)
+                  </button>
+                </div>
+              </div>
 
-      {/* Desktop Sidebar with Hover Expand & Scroll Support */}
-      <aside 
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        className={`bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-slate-800 dark:text-slate-100 hidden sm:flex flex-col shadow-xl h-screen sticky top-0 border-r border-slate-200/70 dark:border-slate-800/80 transition-all duration-300 ease-in-out z-40 ${
-          isHovered ? "w-64" : "w-20"
-        }`}
-      >
-        <SidebarContent />
-      </aside>
-    </>
+              {type === "expense" && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-500">Select Supplier / Seller</label>
+                  <select
+                    value={supplierName}
+                    onChange={(e) => setSupplierName(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                  >
+                    <option value="">-- General Expense (No Seller) --</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.supplierName}>
+                        {s.supplierName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500">Amount (Rs.)</label>
+                <input
+                  type="number"
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500">Description / Reason</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter details..."
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+                {submitting ? "Saving..." : "Save Record"}
+              </button>
+            </form>
+          </div>
+
+          {/* List */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
+            <h2 className="text-base font-bold mb-4">Transaction History</h2>
+            {loading ? (
+              <p className="text-sm text-slate-400">Loading...</p>
+            ) : transactions.length === 0 ? (
+              <p className="text-sm text-slate-400">No records found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-slate-100 text-xs font-bold uppercase text-slate-400 dark:border-slate-800">
+                    <tr>
+                      <th className="pb-3">Type</th>
+                      <th className="pb-3">Description</th>
+                      <th className="pb-3">Seller</th>
+                      <th className="pb-3 text-right">Amount</th>
+                      <th className="pb-3 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {transactions.map((tx) => (
+                      <tr key={tx.id}>
+                        <td className="py-3">
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                              tx.type === "income"
+                                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                : "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300"
+                            }`}
+                          >
+                            {tx.type.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="py-3 font-medium">{tx.description}</td>
+                        <td className="py-3 text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                          {tx.supplierName || "-"}
+                        </td>
+                        <td
+                          className={`py-3 text-right font-black ${
+                            tx.type === "income" ? "text-emerald-600" : "text-red-600"
+                          }`}
+                        >
+                          {tx.type === "income" ? "+" : "-"} {money(tx.amount)}
+                        </td>
+                        <td className="py-3 text-center">
+                          <button
+                            onClick={() => handleDelete(tx.id)}
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }
