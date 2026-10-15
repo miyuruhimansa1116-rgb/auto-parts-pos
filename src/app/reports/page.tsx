@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, deleteDoc, doc, getDocs } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs, getDoc } from "firebase/firestore";
 import ReceiptTemplate from "@/components/ReceiptTemplate";
 import { 
   BarChart3, 
@@ -25,8 +25,9 @@ import {
   Filter,
   Layers,
   Receipt,
-  Sparkles,
-  FileText
+  FileText,
+  Send,
+  PackageSearch
 } from "lucide-react";
 
 interface SaleTransaction {
@@ -53,12 +54,28 @@ export default function SalesReportsPage() {
   const [darkMode, setDarkMode] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<SaleTransaction | null>(null);
 
+  const [shopSettings, setShopSettings] = useState({
+    shopName: "Sampath Auto Parts",
+    address: "322, Church Rd, Battuluoya",
+    phone: "07X-XXXXXXX",
+    footerMessage: "THANK YOU COME AGAIN!",
+    currency: "LKR",
+  });
+
+  // WhatsApp states
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [targetWhatsAppNo, setTargetWhatsAppNo] = useState("");
+  const [selectedWhatsAppInvoice, setSelectedWhatsAppInvoice] = useState<SaleTransaction | null>(null);
+
   const [dateRange, setDateRange] = useState<"today" | "yesterday" | "last7" | "thisMonth" | "custom">("thisMonth");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [filterPayment, setFilterPayment] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
+  
+  // Search state and suggestion dropdown control
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [categoryViewMode, setCategoryViewMode] = useState<"revenue" | "profit">("revenue");
 
@@ -70,6 +87,26 @@ export default function SalesReportsPage() {
     if (savedTheme === "dark") {
       setDarkMode(true);
     }
+
+    const fetchShopSettings = async () => {
+      try {
+        const docRef = doc(db, "settings", "shopSettings");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data() as any;
+          setShopSettings({
+            shopName: data.shopName || "Sampath Auto Parts",
+            address: data.address || "322, Church Rd, Battuluoya",
+            phone: data.phone || "07X-XXXXXXX",
+            footerMessage: data.footerMessage || "THANK YOU COME AGAIN!",
+            currency: data.currency || "LKR",
+          });
+        }
+      } catch (err) {
+        console.warn("Could not fetch shop settings:", err);
+      }
+    };
+    fetchShopSettings();
   }, []);
 
   const toggleDarkMode = () => {
@@ -158,7 +195,8 @@ export default function SalesReportsPage() {
 
         localStorage.setItem("pos_offline_sales", JSON.stringify(remainingOfflineSales));
 
-        allSales.sort((a, b) => a.invoiceNo.localeCompare(b.invoiceNo, undefined, { numeric: true, sensitivity: 'base' }));
+        // Descending order for invoices (newest first)[cite: 7, 8]
+        allSales.sort((a, b) => b.invoiceNo.localeCompare(a.invoiceNo, undefined, { numeric: true, sensitivity: 'base' }));
 
         setSales(allSales);
         setCategories(Array.from(catSet));
@@ -256,8 +294,83 @@ export default function SalesReportsPage() {
       return matchesDate && matchesPayment && matchesCategory && matchesSearch;
     });
 
-    return filtered.sort((a, b) => a.invoiceNo.localeCompare(b.invoiceNo, undefined, { numeric: true, sensitivity: 'base' }));
+    // Descending order for filtered invoices[cite: 7, 8]
+    return filtered.sort((a, b) => b.invoiceNo.localeCompare(a.invoiceNo, undefined, { numeric: true, sensitivity: 'base' }));
   }, [sales, dateRange, startDate, endDate, filterPayment, filterCategory, searchQuery]);
+
+  // Search Auto-Suggestions Generator (Invoice No, Item Name, Part Number, Customer Name)
+  const searchSuggestions = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+
+    const suggestions: { label: string; type: "Invoice" | "Item" | "Part No" | "Customer" }[] = [];
+    const seenLabels = new Set<string>();
+
+    sales.forEach((s) => {
+      if (s.invoiceNo && s.invoiceNo.toLowerCase().includes(query)) {
+        if (!seenLabels.has(s.invoiceNo)) {
+          seenLabels.add(s.invoiceNo);
+          suggestions.push({ label: s.invoiceNo, type: "Invoice" });
+        }
+      }
+
+      if (s.customerName && s.customerName.toLowerCase().includes(query)) {
+        if (!seenLabels.has(s.customerName)) {
+          seenLabels.add(s.customerName);
+          suggestions.push({ label: s.customerName, type: "Customer" });
+        }
+      }
+
+      s.items.forEach((it: any) => {
+        const name = it.name || it.itemName;
+        if (name && name.toLowerCase().includes(query)) {
+          if (!seenLabels.has(name)) {
+            seenLabels.add(name);
+            suggestions.push({ label: name, type: "Item" });
+          }
+        }
+
+        const partNo = it.partNumber || it.partNo;
+        if (partNo && partNo.toLowerCase().includes(query)) {
+          if (!seenLabels.has(partNo)) {
+            seenLabels.add(partNo);
+            suggestions.push({ label: partNo, type: "Part No" });
+          }
+        }
+      });
+    });
+
+    return suggestions.slice(0, 8);
+  }, [sales, searchQuery]);
+
+  // Calculate specific item count & sales value within the selected filtered timeframe if a specific item name is searched[cite: 7, 8]
+  const specificItemStats = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return null;
+
+    let matchedQty = 0;
+    let matchedTotal = 0;
+    let exactItemName = "";
+
+    filteredSales.forEach((sale) => {
+      sale.items.forEach((it: any) => {
+        const name = (it.name || it.itemName || "").toLowerCase();
+        const partNo = (it.partNumber || it.partNo || "").toLowerCase();
+        if (name.includes(q) || partNo.includes(q)) {
+          const itemQty = Number(it.cartQty || it.qty || 1);
+          const itemPrice = Number(it.sellingPrice || it.price || 0);
+          matchedQty += itemQty;
+          matchedTotal += itemQty * itemPrice;
+          if (!exactItemName) exactItemName = it.name || it.itemName;
+        }
+      });
+    });
+
+    if (matchedQty > 0) {
+      return { name: exactItemName || searchQuery, qty: matchedQty, total: matchedTotal };
+    }
+    return null;
+  }, [filteredSales, searchQuery]);
 
   const metrics = useMemo(() => {
     let totalRevenue = 0;
@@ -325,6 +438,80 @@ export default function SalesReportsPage() {
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 5);
   }, [filteredSales]);
+
+  const generateReportWhatsAppText = (inv: SaleTransaction) => {
+    const formattedDate = inv.createdAt?.toDate 
+      ? inv.createdAt.toDate().toLocaleDateString() 
+      : new Date(inv.createdAt || Date.now()).toLocaleDateString();
+
+    const currencySymbol = shopSettings.currency === "USD" ? "$" : "Rs.";
+
+    let itemsText = "";
+    inv.items.forEach((item, index) => {
+      const qty = Number(item.cartQty || item.qty || 1);
+      const price = Number(item.sellingPrice || item.price || 0);
+      const total = qty * price;
+      const itemName = item.name || item.itemName || "Item";
+      itemsText += `${index + 1}.${itemName}\n`;
+      itemsText += `   ${qty} x ${price.toLocaleString()} =${total.toLocaleString()}\n\n`;
+    });
+
+    let extraText = "";
+    if (Number(inv.laborCharge) > 0) {
+      extraText += `Labor Charge: ${currencySymbol}${Number(inv.laborCharge).toLocaleString()}\n`;
+    }
+    (inv.extraCharges || []).forEach((ex) => {
+      extraText += `${ex.name}: ${currencySymbol}${ex.amount.toLocaleString()}\n`;
+    });
+
+    const calculatedSubTotal = inv.subTotal || inv.items.reduce((acc, curr) => acc + (Number(curr.sellingPrice || curr.price || 0) * Number(curr.cartQty || curr.qty || 1)), 0);
+    const calculatedNetTotal = calculatedSubTotal - Number(inv.discount || 0) + Number(inv.laborCharge || 0) + (inv.extraCharges || []).reduce((acc, curr) => acc + curr.amount, 0);
+
+    return (
+      `*${shopSettings.shopName}*\n` +
+      `${shopSettings.address}\n` +
+      `Tel: ${shopSettings.phone}\n` +
+      `--------------------------------\n` +
+      `Inv: #${inv.invoiceNo}\n` +
+      `Date: ${formattedDate}\n` +
+      `Cust: ${inv.customerName || "Cash Customer"}\n` +
+      `--------------------------------\n` +
+      `*ITEMS:*\n\n` +
+      itemsText +
+      `--------------------------------\n` +
+      `Subtotal: ${currencySymbol}${calculatedSubTotal.toLocaleString()}\n` +
+      (Number(inv.discount) > 0 ? `Discount: -${currencySymbol}${Number(inv.discount).toLocaleString()}\n` : ``) +
+      extraText +
+      `*NET TOTAL: ${currencySymbol}${calculatedNetTotal.toLocaleString()}*\n` +
+      `--------------------------------\n` +
+      `Payment Method: ${inv.paymentMethod || "Cash"}\n` +
+      (Number(inv.cashPaid) > 0 ? `Cash Tendered: ${currencySymbol}${Number(inv.cashPaid).toLocaleString()}\n` : ``) +
+      (Number(inv.balance) > 0 ? `Balance Change: ${currencySymbol}${Number(inv.balance).toLocaleString()}\n` : ``) +
+      `--------------------------------\n` +
+      `${shopSettings.footerMessage}\n` +
+      `Software by MH System`
+    );
+  };
+
+  const handleSendWhatsAppReport = () => {
+    if (!targetWhatsAppNo.trim()) {
+      alert("Please enter a valid WhatsApp number!");
+      return;
+    }
+    if (!selectedWhatsAppInvoice) return;
+
+    let phone = targetWhatsAppNo.trim().replace(/[^0-9]/g, "");
+    if (phone.startsWith("0")) {
+      phone = "94" + phone.slice(1);
+    }
+
+    const messageText = encodeURIComponent(generateReportWhatsAppText(selectedWhatsAppInvoice));
+    const waUrl = `https://wa.me/${phone}?text=${messageText}`;
+
+    window.open(waUrl, "_blank");
+    setShowWhatsAppModal(false);
+    setTargetWhatsAppNo("");
+  };
 
   const exportCSV = () => {
     const headers = ["Date,Invoice #,Customer,Payment Method,Total Items,Net Total\n"];
@@ -496,7 +683,7 @@ export default function SalesReportsPage() {
               </select>
             </div>
 
-            <div>
+            <div className="relative">
               <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 block mb-1.5 flex items-center gap-1.5">
                 <Search className="w-4 h-4 text-emerald-500" /> Search Keyword
               </label>
@@ -506,13 +693,21 @@ export default function SalesReportsPage() {
                   type="text"
                   placeholder="Search invoice, item, part # or customer..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   className="w-full pl-10 pr-10 p-3 border border-gray-300 dark:border-gray-700 rounded-xl text-sm font-semibold text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
                 {searchQuery && (
                   <button
                     type="button"
-                    onClick={() => setSearchQuery("")}
+                    onClick={() => {
+                      setSearchQuery("");
+                      setShowSuggestions(false);
+                    }}
                     className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition cursor-pointer"
                     title="Clear search"
                   >
@@ -520,9 +715,50 @@ export default function SalesReportsPage() {
                   </button>
                 )}
               </div>
+
+              {/* Auto-suggestions Dropdown */}
+              {showSuggestions && searchSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-30 overflow-hidden space-y-1 p-1">
+                  {searchSuggestions.map((sug, idx) => (
+                    <div
+                      key={idx}
+                      onMouseDown={() => {
+                        setSearchQuery(sug.label);
+                        setShowSuggestions(false);
+                      }}
+                      className="px-3 py-2 text-xs font-semibold hover:bg-blue-50 dark:hover:bg-gray-700/80 rounded-lg cursor-pointer flex justify-between items-center transition"
+                    >
+                      <span className="text-gray-800 dark:text-gray-200 font-bold">{sug.label}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 font-medium">
+                        {sug.type}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Specific Searched Item Stats Banner (Appears when searching/selecting a specific item) */}
+        {specificItemStats && (
+          <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 p-4 rounded-2xl flex flex-wrap justify-between items-center gap-4 shadow-sm no-print">
+            <div className="flex items-center gap-2">
+              <PackageSearch className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                Searched Item Summary: <span className="text-indigo-600 dark:text-indigo-400">{specificItemStats.name}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-6 text-sm font-bold">
+              <div className="bg-white dark:bg-gray-900 px-3 py-1.5 rounded-xl border border-indigo-100 dark:border-indigo-900 text-emerald-600">
+                Units Sold: {specificItemStats.qty} pcs
+              </div>
+              <div className="bg-white dark:bg-gray-900 px-3 py-1.5 rounded-xl border border-indigo-100 dark:border-indigo-900 text-blue-600">
+                Total Value: Rs. {specificItemStats.total.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 4 Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
@@ -724,6 +960,18 @@ export default function SalesReportsPage() {
                             <Eye className="w-4 h-4" /> View
                           </button>
                           
+                          <button
+                            onClick={() => {
+                              setSelectedWhatsAppInvoice(sale);
+                              setTargetWhatsAppNo("");
+                              setShowWhatsAppModal(true);
+                            }}
+                            className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white px-3 py-2 rounded-xl text-xs font-bold transition border border-emerald-200 dark:border-emerald-700/60 inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                            title="Send via WhatsApp"
+                          >
+                            <Send className="w-4 h-4" /> WhatsApp
+                          </button>
+
                           {userRole === "admin" && (
                             <button
                               onClick={(e) => handleDeleteSale(sale.id, e)}
@@ -761,15 +1009,30 @@ export default function SalesReportsPage() {
               </div>
 
               <div className="p-6 overflow-y-auto printable-receipt bg-white text-black flex justify-center">
-                <ReceiptTemplate invoice={selectedInvoice} />
+                <ReceiptTemplate 
+                  invoice={selectedInvoice} 
+                  onSettingsLoaded={(settings) => setShopSettings(settings)}
+                />
               </div>
 
-              <div className="bg-gray-50 dark:bg-gray-900 p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 no-print">
+              <div className="bg-gray-50 dark:bg-gray-900 p-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap justify-end gap-3 no-print">
                 <button
                   onClick={() => setSelectedInvoice(null)}
                   className="px-4 py-2.5 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-bold transition cursor-pointer"
                 >
                   Close
+                </button>
+                <button
+                  onClick={() => {
+                    const invToShare = selectedInvoice;
+                    setSelectedInvoice(null);
+                    setSelectedWhatsAppInvoice(invToShare);
+                    setTargetWhatsAppNo("");
+                    setShowWhatsAppModal(true);
+                  }}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  <Send className="w-4 h-4" /> Send WhatsApp
                 </button>
                 <button
                   onClick={() => handlePrintInvoice(selectedInvoice)}
@@ -781,6 +1044,56 @@ export default function SalesReportsPage() {
             </div>
           </div>
         )}
+
+        {/* WhatsApp Direct Send Modal */}
+        {showWhatsAppModal && selectedWhatsAppInvoice && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-700 space-y-4">
+              <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3">
+                <h3 className="font-bold text-base text-gray-900 dark:text-white flex items-center gap-2">
+                  <Send className="w-5 h-5 text-emerald-500" /> Send Bill via WhatsApp
+                </h3>
+                <button onClick={() => setShowWhatsAppModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-600 dark:text-gray-300 block mb-1">
+                  WhatsApp Mobile Number:
+                </label>
+                <input
+                  type="text"
+                  placeholder="0771234567"
+                  value={targetWhatsAppNo}
+                  onChange={(e) => setTargetWhatsAppNo(e.target.value)}
+                  className="w-full p-3 border border-emerald-300 dark:border-emerald-700 rounded-xl text-sm font-bold bg-white dark:bg-gray-800 text-emerald-600 outline-none"
+                  autoFocus
+                />
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] font-mono text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto whitespace-pre-wrap">
+                {generateReportWhatsAppText(selectedWhatsAppInvoice)}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setShowWhatsAppModal(false)}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendWhatsAppReport}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Send className="w-4 h-4" /> Send Now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
